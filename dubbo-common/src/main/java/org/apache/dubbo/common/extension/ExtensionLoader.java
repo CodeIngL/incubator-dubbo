@@ -544,31 +544,31 @@ public class ExtensionLoader<T> {
     }
 
     private T injectExtension(T instance) {
+        if (objectFactory == null) {
+            return instance;
+        }
         try {
-            if (objectFactory != null) {
-                for (Method method : instance.getClass().getMethods()) {
-                    if (isSetter(method)) {
-                        /**
-                         * Check {@link DisableInject} to see if we need auto injection for this property
-                         */
-                        if (method.getAnnotation(DisableInject.class) != null) {
-                            continue;
-                        }
-                        Class<?> pt = method.getParameterTypes()[0];
-                        if (ReflectUtils.isPrimitives(pt)) {
-                            continue;
-                        }
-                        try {
-                            String property = getSetterProperty(method);
-                            Object object = objectFactory.getExtension(pt, property);
-                            if (object != null) {
-                                method.invoke(instance, object);
-                            }
-                        } catch (Exception e) {
-                            logger.error("Failed to inject via method " + method.getName()
-                                    + " of interface " + type.getName() + ": " + e.getMessage(), e);
-                        }
+            for (Method method : instance.getClass().getMethods()) {
+                if (!isSetter(method)) {
+                    continue;
+                }
+                if (method.getAnnotation(DisableInject.class) != null) { //忽略的设置
+                    continue;
+                }
+                Class<?> pt = method.getParameterTypes()[0]; //获得设置方法的参数类型
+                if (ReflectUtils.isPrimitives(pt)) { //基本类型
+                    continue;
+                }
+                try {
+                    String property = getSetterProperty(method);
+                    Object object = objectFactory.getExtension(pt, property);
+                    if (object == null) {
+                        continue;
                     }
+                    method.invoke(instance, object);
+                } catch (Exception e) {
+                    logger.error("Failed to inject via method " + method.getName()
+                            + " of interface " + type.getName() + ": " + e.getMessage(), e);
                 }
             }
         } catch (Exception e) {
