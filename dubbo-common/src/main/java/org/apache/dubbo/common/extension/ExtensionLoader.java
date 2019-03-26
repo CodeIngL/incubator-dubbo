@@ -644,19 +644,14 @@ public class ExtensionLoader<T> {
      */
     private void cacheDefaultExtensionName() {
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
-        if (defaultAnnotation != null) {
-            String value = defaultAnnotation.value();
-            if ((value = value.trim()).length() > 0) {
-                String[] names = NAME_SEPARATOR.split(value);
-                if (names.length > 1) {
-                    throw new IllegalStateException("More than 1 default extension name on extension " + type.getName()
-                            + ": " + Arrays.toString(names));
-                }
-                if (names.length == 1) {
-                    cachedDefaultName = names[0];
-                }
-            }
+        if (defaultAnnotation == null) {
+            return;
         }
+        String value = defaultAnnotation.value();
+        if (value.contains(",")) {
+            throw new IllegalStateException("More than 1 default extension name on extension " + type.getName() + ": " + value);
+        }
+        cachedDefaultName = value.trim();
     }
 
     private void loadDirectory(Map<String, Class<?>> extensionClasses, String dir, String type) {
