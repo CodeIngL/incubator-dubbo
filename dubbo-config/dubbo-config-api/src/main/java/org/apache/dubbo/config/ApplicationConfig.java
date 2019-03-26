@@ -29,7 +29,14 @@ import java.util.Map;
 
 
 /**
- * The application info
+ * <h1>
+ * ApplicationConfig
+ * </h1>
+ * <p>
+ * 提供了应用级别上选项相关的支持
+ * <p>
+ * 主要是Monitor Center和 Registry centers
+ * @see ModuleConfig
  *
  * @export
  */
