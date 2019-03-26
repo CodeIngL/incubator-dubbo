@@ -432,61 +432,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         appendParameters(map, provider, Constants.DEFAULT_KEY);
         appendParameters(map, protocolConfig);
         appendParameters(map, this);
-        if (CollectionUtils.isNotEmpty(methods)) {
-            for (MethodConfig method : methods) {
-                appendParameters(map, method, method.getName());
-                String retryKey = method.getName() + ".retry";
-                if (map.containsKey(retryKey)) {
-                    String retryValue = map.remove(retryKey);
-                    if ("false".equals(retryValue)) {
-                        map.put(method.getName() + ".retries", "0");
-                    }
-                }
-                List<ArgumentConfig> arguments = method.getArguments();
-                if (CollectionUtils.isNotEmpty(arguments)) {
-                    for (ArgumentConfig argument : arguments) {
-                        // convert argument type
-                        if (argument.getType() != null && argument.getType().length() > 0) {
-                            Method[] methods = interfaceClass.getMethods();
-                            // visit all methods
-                            if (methods != null && methods.length > 0) {
-                                for (int i = 0; i < methods.length; i++) {
-                                    String methodName = methods[i].getName();
-                                    // target the method, and get its signature
-                                    if (methodName.equals(method.getName())) {
-                                        Class<?>[] argtypes = methods[i].getParameterTypes();
-                                        // one callback in the method
-                                        if (argument.getIndex() != -1) {
-                                            if (argtypes[argument.getIndex()].getName().equals(argument.getType())) {
-                                                appendParameters(map, argument, method.getName() + "." + argument.getIndex());
-                                            } else {
-                                                throw new IllegalArgumentException("Argument config error : the index attribute and type attribute not match :index :" + argument.getIndex() + ", type:" + argument.getType());
-                                            }
-                                        } else {
-                                            // multiple callbacks in the method
-                                            for (int j = 0; j < argtypes.length; j++) {
-                                                Class<?> argclazz = argtypes[j];
-                                                if (argclazz.getName().equals(argument.getType())) {
-                                                    appendParameters(map, argument, method.getName() + "." + j);
-                                                    if (argument.getIndex() != -1 && argument.getIndex() != j) {
-                                                        throw new IllegalArgumentException("Argument config error : the index attribute and type attribute not match :index :" + argument.getIndex() + ", type:" + argument.getType());
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (argument.getIndex() != -1) {
-                            appendParameters(map, argument, method.getName() + "." + argument.getIndex());
-                        } else {
-                            throw new IllegalArgumentException("Argument config must set index or type attribute.eg: <dubbo:argument index='0' .../> or <dubbo:argument type=xxx .../>");
-                        }
-
-                    }
-                }
-            } // end of methods for
-        }
+        appendMethodWithArgumentConfigParameters(map);
 
         if (ProtocolUtils.isGeneric(generic)) {
             map.put(Constants.GENERIC_KEY, generic);
@@ -577,6 +523,76 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
         this.urls.add(url);
+    }
+
+    /**
+     * <h1>append each methodConfig info into map</h1>
+     * <ul>
+     * <li>append each methodConfig into to map</li>
+     * <li>transform a special key like {methodName}.retry</li>
+     * <li>append each methodConfig's argumentConfig info map</li>
+     * </ul>
+     * <p>
+     * argumentConfig is a config for methodConfig
+     * <p>
+     * methodConfig is a config for method
+     * <p>
+     * so argumentConfig ias a config to describe method's argument.
+     * <p>
+     * you can assign two field:index,type
+     * </p>
+     *
+     * @param map info map
+     */
+    private void appendMethodWithArgumentConfigParameters(Map<String, String> map) {
+        if (CollectionUtils.isEmpty(methods)) {
+            return;
+        }
+        for (MethodConfig methodConfig : methods) {
+            appendParameters(map, methodConfig, methodConfig.getName());
+            if ("false".equals(map.remove(methodConfig.getName() + ".retry"))) { //Config information conversion, [${methodName}.retry:false] to [${methodName}.retries:0]
+                map.put(methodConfig.getName() + ".retries", "0");
+            }
+            List<ArgumentConfig> arguments = methodConfig.getArguments(); //method config has some argumentConfig。
+            if (arguments == null || arguments.size() == 0) {
+                continue;
+            }
+            for (ArgumentConfig argument : arguments) {
+                int argIndex = argument.getIndex();
+                String argType = argument.getType();
+                if (StringUtils.isNotEmpty(argType)) { //ArgumentConfig has a type value
+                    for (Method method : interfaceClass.getMethods()) { //methodConfig matched interface's method by there's name
+                        String methodName = method.getName();
+                        if (!methodName.equals(methodConfig.getName())) {
+                            continue;
+                        }
+                        Class<?>[] argTypes = method.getParameterTypes(); //method's argument type array.
+                        if (argIndex != -1) { // use argumentConfig index to match method's argument index
+                            if (argTypes[argIndex].getName().equals(argType)) { //has matched
+                                appendParameters(map, argument, methodConfig.getName() + "." + argIndex);
+                            } else {
+                                throw new IllegalArgumentException("argument config error : the index attribute and type attribute not match :index :" + argIndex + ", type:" + argType);
+                            }
+                        } else {
+                            boolean findMark = false;
+                            for (int i = 0; i < argTypes.length; i++) { // with type info，without index info，we matched with argument class's type by name。
+                                if (argTypes[i].getName().equals(argType)) {
+                                    findMark = true;
+                                    appendParameters(map, argument, methodConfig.getName() + "." + i);
+                                }
+                            }
+                            if (!findMark) {
+                                throw new IllegalArgumentException("argument config error : type attribute not match : type:" + argType);
+                            }
+                        }
+                    }
+                } else if (argIndex != -1) { //only index option
+                    appendParameters(map, argument, methodConfig.getName() + "." + argIndex);
+                } else {
+                    throw new IllegalArgumentException("argument config must set index or type attribute.eg: <dubbo:argument index='0' .../> or <dubbo:argument type=xxx .../>");
+                }
+            }
+        } // end of methods for
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
