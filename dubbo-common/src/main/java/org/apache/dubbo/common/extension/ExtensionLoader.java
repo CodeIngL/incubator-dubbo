@@ -29,6 +29,7 @@ import org.apache.dubbo.common.utils.Holder;
 import org.apache.dubbo.common.utils.ReflectUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.common.utils.CollectionUtils;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
@@ -727,10 +728,11 @@ public class ExtensionLoader<T> {
         } else {
             clazz.getConstructor();
             if (StringUtils.isEmpty(name)) {
-                name = findAnnotationName(clazz);
-                if (name.length() == 0) {
-                    throw new IllegalStateException("No such extension name for the class " + clazz.getName() + " in the config " + resourceURL);
+                name = clazz.getSimpleName();
+                if (name.endsWith(type.getSimpleName())) {
+                    name = name.substring(0, name.length() - type.getSimpleName().length());
                 }
+                name = name.toLowerCase();
             }
 
             String[] names = NAME_SEPARATOR.split(name);
@@ -820,19 +822,6 @@ public class ExtensionLoader<T> {
         } catch (NoSuchMethodException e) {
             return false;
         }
-    }
-
-    @SuppressWarnings("deprecation")
-    private String findAnnotationName(Class<?> clazz) {
-        org.apache.dubbo.common.Extension extension = clazz.getAnnotation(org.apache.dubbo.common.Extension.class);
-        if (extension == null) {
-            String name = clazz.getSimpleName();
-            if (name.endsWith(type.getSimpleName())) {
-                name = name.substring(0, name.length() - type.getSimpleName().length());
-            }
-            return name.toLowerCase();
-        }
-        return extension.value();
     }
 
     @SuppressWarnings("unchecked")
