@@ -25,7 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The module info
+ * <h1>
+ * ModuleConfig
+ * </h1>
+ * <p>
+ * 提供了分层结构的模块化的可选的配置项。
+ * <p>
+ * 主要是Monitor Center和 Registry centers
+ * @see ApplicationConfig
  *
  * @export
  */
