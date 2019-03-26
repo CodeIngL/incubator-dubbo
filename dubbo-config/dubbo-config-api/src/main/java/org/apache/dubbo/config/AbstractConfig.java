@@ -134,6 +134,19 @@ public abstract class AbstractConfig implements Serializable {
         return value;
     }
 
+    /**
+     * <h1>Build Class Tag.</h1>
+     *
+     * <p>
+     * build with class's simple name and try to remove some special suffix. ex:Config or Bean
+     * <p>
+     * try transform camel name with special split.
+     * <p>
+     * ex: if class name called <code>DemoSimpleConfig</code>, it return <code>demo-simple</code>
+     *
+     * @param cls goal Class
+     * @return tag
+     */
     private static String getTagName(Class<?> cls) {
         String tag = cls.getSimpleName();
         for (String suffix : SUFFIXES) {
