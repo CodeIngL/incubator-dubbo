@@ -28,7 +28,13 @@ import org.apache.dubbo.remoting.telnet.TelnetHandler;
 import java.util.Arrays;
 
 /**
- * The service provider default configuration
+ * <h1>
+ * ProviderConfig
+ * </h1>
+ * <p>
+ * ServiceConfig的配置模板类，提供多个ServiceConfig下的部分可以进行公共配置的模板配置，用于减少相关的配置项进行配置
+ * <p>
+ * 另一种形式的表达可以认为，其提供了默认值，当ServiceConfig的值不存在时，使用这些默认值作为后备选项
  *
  * @export
  * @see org.apache.dubbo.config.ProtocolConfig
