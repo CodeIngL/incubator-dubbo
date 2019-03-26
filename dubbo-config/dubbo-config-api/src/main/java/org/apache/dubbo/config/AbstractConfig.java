@@ -41,6 +41,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
+
 /**
  * Utility methods and public methods for parsing configuration
  *
@@ -183,20 +185,17 @@ public abstract class AbstractConfig implements Serializable {
                                 str = pre + "," + str;
                             }
                         }
-                        if (prefix != null && prefix.length() > 0) {
+                        if (isNotEmpty(prefix)) {
                             key = prefix + "." + key;
                         }
                         parameters.put(key, str);
                     } else if (parameter != null && parameter.required()) {
                         throw new IllegalStateException(config.getClass().getSimpleName() + "." + key + " == null");
                     }
-                } else if ("getParameters".equals(name)
-                        && Modifier.isPublic(method.getModifiers())
-                        && method.getParameterTypes().length == 0
-                        && method.getReturnType() == Map.class) {
+                } else if (isMatchGetParametersMethod(method)) {
                     Map<String, String> map = (Map<String, String>) method.invoke(config, new Object[0]);
                     if (map != null && map.size() > 0) {
-                        String pre = (prefix != null && prefix.length() > 0 ? prefix + "." : "");
+                        String pre = (isNotEmpty(prefix) ? prefix + "." : "");
                         for (Map.Entry<String, String> entry : map.entrySet()) {
                             parameters.put(pre + entry.getKey().replace('-', '.'), entry.getValue());
                         }
@@ -507,10 +506,7 @@ public abstract class AbstractConfig implements Serializable {
                     } else {
                         metaData.put(key, null);
                     }
-                } else if ("getParameters".equals(name)
-                        && Modifier.isPublic(method.getModifiers())
-                        && method.getParameterTypes().length == 0
-                        && method.getReturnType() == Map.class) {
+                } else if (isMatchGetParametersMethod(method)) {
                     Map<String, String> map = (Map<String, String>) method.invoke(this, new Object[0]);
                     if (map != null && map.size() > 0) {
 //                            String pre = (prefix != null && prefix.length() > 0 ? prefix + "." : "");
@@ -524,6 +520,29 @@ public abstract class AbstractConfig implements Serializable {
             }
         }
         return metaData;
+    }
+
+    /**
+     * <code>GetParameters</code>is a special method.
+     * <p>
+     * that for developer add customized parameter for designated config class if config class support customized parameter
+     * <p> A method matched likes this:
+     * <code>
+     * public Map getParameters(){...}
+     * </code>
+     *
+     * @param method originMethod
+     * @return whether method matched.  matched return true otherwise false
+     */
+    private static boolean isMatchGetParametersMethod(Method method) {
+        if (method == null) {
+            return false;
+        }
+        String name = method.getName();
+        return "getParameters".equals(name)
+                && Modifier.isPublic(method.getModifiers())
+                && method.getParameterTypes().length == 0
+                && method.getReturnType() == Map.class;
     }
 
     @Parameter(excluded = true)
