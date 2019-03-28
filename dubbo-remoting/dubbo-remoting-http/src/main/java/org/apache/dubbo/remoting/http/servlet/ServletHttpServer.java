@@ -21,6 +21,9 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.remoting.http.HttpHandler;
 import org.apache.dubbo.remoting.http.support.AbstractHttpServer;
 
+/**
+ * 基于web容器的服务，非独立使用，需要将DispatcherServlet注入到对应的外部容器中。
+ */
 public class ServletHttpServer extends AbstractHttpServer {
 
     public ServletHttpServer(URL url, HttpHandler handler) {

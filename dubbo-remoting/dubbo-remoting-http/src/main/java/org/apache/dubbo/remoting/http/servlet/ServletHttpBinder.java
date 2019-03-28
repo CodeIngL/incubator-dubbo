@@ -24,11 +24,13 @@ import org.apache.dubbo.remoting.http.HttpServer;
 
 /**
  * ServletHttpTransporter
+ *
+ * 用于在外部容器中使用，得到一个支持外部容器的服务
  */
 public class ServletHttpBinder implements HttpBinder {
 
     @Override
-    @Adaptive()
+    @Adaptive
     public HttpServer bind(URL url, HttpHandler handler) {
         return new ServletHttpServer(url, handler);
     }
