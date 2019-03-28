@@ -58,10 +58,25 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
     private final ZookeeperClient zkClient;
 
+
+    /**
+     * 生成zookeeper的注册中心实例
+     * <ul>
+     * <li>校验url中地址的合理性</li><br/>
+     * <li>获得group:来自url中key为{@link Constants#GROUP_KEY}的值，默认是{@link #DEFAULT_ROOT}</li><br/>
+     * <li>使用group，设定root属性，即zk应用路径</li><br/>
+     * <li>从zk客户端转换器中获得zk客户端(封装ZkClient or Curator)</li><br/>
+     * <li>为zk客户端添加状态监听器，失败的时候进行复原</li><br/>
+     * </ul>
+     *
+     * @param url                  注册的URL
+     * @param zookeeperTransporter zk客户端转换器
+     * @see FailbackRegistry#FailbackRegistry(URL)
+     */
     public ZookeeperRegistry(URL url, ZookeeperTransporter zookeeperTransporter) {
         super(url);
         if (url.isAnyHost()) {
-            throw new IllegalStateException("registry address == null");
+            throw new IllegalStateException("registry address is null");
         }
         String group = url.getParameter(Constants.GROUP_KEY, DEFAULT_ROOT);
         if (!group.startsWith(Constants.PATH_SEPARATOR)) {

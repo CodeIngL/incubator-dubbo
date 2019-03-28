@@ -37,6 +37,12 @@ public class ZookeeperRegistryFactory extends AbstractRegistryFactory {
         this.zookeeperTransporter = zookeeperTransporter;
     }
 
+    /**
+     * create zookeeper registry instance
+     * @param url description for registry instance
+     * @return zookeeper registry instance
+     * @see ZookeeperRegistry#ZookeeperRegistry(URL, ZookeeperTransporter)
+     */
     @Override
     public Registry createRegistry(URL url) {
         return new ZookeeperRegistry(url, zookeeperTransporter);
