@@ -36,6 +36,8 @@ import static org.apache.dubbo.common.Version.isRelease270OrHigher;
 
 /**
  * RmiProtocol.
+ *
+ * rmi的Protocol支持
  */
 public class RmiProtocol extends AbstractProxyProtocol {
 
@@ -50,6 +52,15 @@ public class RmiProtocol extends AbstractProxyProtocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 暴露rmi服务
+     * @param impl 实现
+     * @param type
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     protected <T> Runnable doExport(final T impl, Class<T> type, URL url) throws RpcException {
         RmiServiceExporter rmiServiceExporter = createExporter(impl, type, url, false);
@@ -67,6 +78,14 @@ public class RmiProtocol extends AbstractProxyProtocol {
         };
     }
 
+    /**
+     * 引用rmi服务
+     * @param serviceType
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T doRefer(final Class<T> serviceType, final URL url) throws RpcException {
