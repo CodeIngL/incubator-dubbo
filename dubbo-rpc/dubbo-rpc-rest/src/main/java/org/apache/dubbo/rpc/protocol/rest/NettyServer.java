@@ -29,6 +29,8 @@ import java.util.Map;
 
 /**
  * Netty server can't support @Context injection of servlet objects since it's not a servlet container
+ * Netty服务器不支持@Context注入servlet对象，因为它不是servlet容器。
+ * 另一种形式使用netty来处理http请求的独立的rest服务，这是resteasy的支持。使用resteasy的netty
  *
  */
 public class NettyServer extends BaseRestServer {

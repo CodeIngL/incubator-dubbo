@@ -36,6 +36,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
 
+/**
+ * dubbohttp服务，在对应的HttpServer上进行暴露。
+ */
 public class DubboHttpServer extends BaseRestServer {
 
     private final HttpServletDispatcher dispatcher = new HttpServletDispatcher();
@@ -81,6 +84,9 @@ public class DubboHttpServer extends BaseRestServer {
         return deployment;
     }
 
+    /**
+     * rest风格需要使用resteasy进行处理，因此http请求委托给相应的HttpServletDispatcher处理，处理内容流转到resteasy的风格
+     */
     private class RestHandler implements HttpHandler {
 
         @Override
