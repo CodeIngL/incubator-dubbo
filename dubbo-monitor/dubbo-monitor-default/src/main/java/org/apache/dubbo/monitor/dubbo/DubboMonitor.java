@@ -36,6 +36,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+
 /**
  * DubboMonitor
  */
@@ -106,17 +107,17 @@ public class DubboMonitor implements Monitor {
 
             // send statistics data
             URL url = statistics.getUrl()
-                    .addParameters(MonitorService.TIMESTAMP, timestamp,
-                            MonitorService.SUCCESS, String.valueOf(success),
-                            MonitorService.FAILURE, String.valueOf(failure),
-                            MonitorService.INPUT, String.valueOf(input),
-                            MonitorService.OUTPUT, String.valueOf(output),
-                            MonitorService.ELAPSED, String.valueOf(elapsed),
-                            MonitorService.CONCURRENT, String.valueOf(concurrent),
-                            MonitorService.MAX_INPUT, String.valueOf(maxInput),
-                            MonitorService.MAX_OUTPUT, String.valueOf(maxOutput),
-                            MonitorService.MAX_ELAPSED, String.valueOf(maxElapsed),
-                            MonitorService.MAX_CONCURRENT, String.valueOf(maxConcurrent),
+                    .addParameters(TIMESTAMP, timestamp,
+                            SUCCESS, String.valueOf(success),
+                            FAILURE, String.valueOf(failure),
+                            INPUT, String.valueOf(input),
+                            OUTPUT, String.valueOf(output),
+                            ELAPSED, String.valueOf(elapsed),
+                            CONCURRENT, String.valueOf(concurrent),
+                            MAX_INPUT, String.valueOf(maxInput),
+                            MAX_OUTPUT, String.valueOf(maxOutput),
+                            MAX_ELAPSED, String.valueOf(maxElapsed),
+                            MAX_CONCURRENT, String.valueOf(maxConcurrent),
                             Constants.DEFAULT_PROTOCOL, protocol
                     );
             monitorService.collect(url);
@@ -148,12 +149,12 @@ public class DubboMonitor implements Monitor {
     @Override
     public void collect(URL url) {
         // data to collect from url
-        int success = url.getParameter(MonitorService.SUCCESS, 0);
-        int failure = url.getParameter(MonitorService.FAILURE, 0);
-        int input = url.getParameter(MonitorService.INPUT, 0);
-        int output = url.getParameter(MonitorService.OUTPUT, 0);
-        int elapsed = url.getParameter(MonitorService.ELAPSED, 0);
-        int concurrent = url.getParameter(MonitorService.CONCURRENT, 0);
+        int success = url.getParameter(SUCCESS, 0);
+        int failure = url.getParameter(FAILURE, 0);
+        int input = url.getParameter(INPUT, 0);
+        int output = url.getParameter(OUTPUT, 0);
+        int elapsed = url.getParameter(ELAPSED, 0);
+        int concurrent = url.getParameter(CONCURRENT, 0);
         // init atomic reference
         Statistics statistics = new Statistics(url);
         AtomicReference<long[]> reference = statisticsMap.get(statistics);
