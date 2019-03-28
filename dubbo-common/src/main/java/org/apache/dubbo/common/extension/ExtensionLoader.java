@@ -65,61 +65,143 @@ public class ExtensionLoader<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLoader.class);
 
+    /**
+     * services目录，用于寻找type对应的Extension
+     */
     private static final String SERVICES_DIRECTORY = "META-INF/services/";
 
+    /**
+     * dubbo目录，用于寻找type对应的Extension
+     */
     private static final String DUBBO_DIRECTORY = "META-INF/dubbo/";
 
+    /**
+     * dubbo/internal目录，用于寻找type对应的Extension
+     */
     private static final String DUBBO_INTERNAL_DIRECTORY = DUBBO_DIRECTORY + "internal/";
 
+    /**
+     * 名字分割符','
+     */
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
+    /**
+     * 全局缓存，缓存了class（指interface），与对应的<code>ExtensionLoader<?></code>的映射.
+     */
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
 
+    /**
+     * type的普通的Extension类型和其实例的映射，
+     * @see #cachedClasses
+     */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>();
 
-    // ==============================
+    // ===============对象属性==============
 
+    /**
+     * T的类型
+     */
     private final Class<?> type;
 
+    /**
+     * 对象工厂
+     * type为ExtensionFactory，其为null
+     * type为其他，其为AdaptiveExtensionFactory实现类实例
+     */
     private final ExtensionFactory objectFactory;
 
+    //    三种情况介绍:
+    //    1. 带有@Adaptive注解的Extension
+    //    2. 能够组合其他type实现类的有wrapper功能的Extension
+    //    3. 普通的Extension
+
+    /**
+     * 缓存:普通Extension和名字的缓存,一个普通实现实例可以带有多个名字哦，cachedName仅仅发生在第一次设置
+     * ex:aa,bb=com.codeL.Demo; 则会缓存com.codeL.Demo:aa
+     */
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<>();
 
+    /**
+     * 缓存:名字和普通Extension类型的映射。
+     * ex:aa,bb=com.codeL.Demo; 则会缓存aa:com.codeL.Demo和bb:com.codeL.Demo
+     */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
+    /**
+     * 缓存:名字和普通Extension上对应的注解Activate的缓存，这个名字是解析后的首名字。
+     * ex:aa,bb=com.codeL.Demo; 首名字就是aa
+     */
     private final Map<String, Object> cachedActivates = new ConcurrentHashMap<>();
+    /**
+     * 缓存:名字和对应Extension实例的映射，这个实例是完全初始化的实例，完成了属性的注入，也有可能被wrapper过。
+     */
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
+    /**
+     * Extension实例缓存，即带有注解@Adaptive的type实现类，这个实例是完全初始化的实例，完成了属性的注入
+     * 没有@Adaptive实现类会进行代码生成
+     */
     private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
+
+    /**
+     * Extension，携带@Adaptive。设置仅仅发生在第一次
+     */
     private volatile Class<?> cachedAdaptiveClass = null;
+
+    /**
+     * 名字:SPI的注解值
+     * ex:@SPI(value="aa")则名字就是aa
+     */
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
+    /**
+     * 能够组合其他type实现类的有wrapper功能的Extension类型
+     */
     private Set<Class<?>> cachedWrapperClasses;
 
+    /**
+     * 异常信息结构
+     */
     private Map<String, IllegalStateException> exceptions = new ConcurrentHashMap<>();
 
+    /**
+     * ExtensionLoader构造函数<br/>
+     * <ul>
+     * <li>确定对应的type</li><br/>
+     * <li>确定对应的objectFactory</li><br/>
+     * </ul>
+     *
+     * @param type 接口类型
+     * @see #getAdaptiveExtension
+     */
     private ExtensionLoader(Class<?> type) {
         this.type = type;
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
-    private static <T> boolean withExtensionAnnotation(Class<T> type) {
-        return type.isAnnotationPresent(SPI.class);
-    }
-
+    /**
+     * 根据type的接口，寻找type的实现，并返回该type下对应的ExtensionLoader。
+     * <ul>
+     * <li>type非空，并必须为Interface，同时带有SPI注解</li>
+     * </ul>
+     *
+     * @param type 类型
+     * @param <T>  type对应的ExtensionLoader。
+     * @return type对应的ExtensionLoader
+     */
     @SuppressWarnings("unchecked")
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
-        if (type == null) {
+        if (type == null) { //非空检查
             throw new IllegalArgumentException("Extension type == null");
         }
-        if (!type.isInterface()) {
+        if (!type.isInterface()) { //类型检查，interface
             throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
         }
-        if (!withExtensionAnnotation(type)) {
-            throw new IllegalArgumentException("Extension type (" + type +
-                    ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
+        if (!type.isAnnotationPresent(SPI.class)) { //必要的spi注解
+            throw new IllegalArgumentException("Extension type (" + type + ") is not an extension, because it is NOT annotated with @SPI!");
         }
 
+        //缓存操作，有则取，无则加入缓存，并返回
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -358,7 +440,7 @@ public class ExtensionLoader<T> {
      */
     public T getDefaultExtension() {
         getExtensionClasses();
-        if (StringUtils.isBlank(cachedDefaultName) || "true".equals(cachedDefaultName)) {
+        if (StringUtils.isBlank(cachedDefaultName)) {
             return null;
         }
         return getExtension(cachedDefaultName);
@@ -517,6 +599,13 @@ public class ExtensionLoader<T> {
         return new IllegalStateException(buf.toString());
     }
 
+    /**
+     * 获得本type类型下的指定名字对应的普通的Extension，
+     * 如果存在包装类，需要进行层层的包装
+     *
+     * @param name
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
         Class<?> clazz = getExtensionClasses().get(name);
@@ -533,16 +622,23 @@ public class ExtensionLoader<T> {
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (CollectionUtils.isNotEmpty(wrapperClasses)) {
                 for (Class<?> wrapperClass : wrapperClasses) {
+                    //为包装后的实例的其他属性进行注入
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                 }
             }
-            return instance;
+            return instance;//需要暴露的实例
         } catch (Throwable t) {
             throw new IllegalStateException("Extension instance (name: " + name + ", class: " +
                     type + ") couldn't be instantiated: " + t.getMessage(), t);
         }
     }
 
+    /**
+     * 为instance注入相关属性值
+     *
+     * @param instance 待处理的对象
+     * @return 已处理的对象
+     */
     private T injectExtension(T instance) {
         if (objectFactory == null) {
             return instance;
@@ -611,6 +707,15 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().get(name);
     }
 
+    /**
+     * 获得type类型下对应的Extension，并保存关系到cachedClasses，
+     * 任何一个Extension都会有对应的名字。
+     * <p>
+     * 这种关系来自文件配置{@link #loadExtensionClasses}
+     *
+     * @return
+     * @see #cachedClasses
+     */
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -625,7 +730,23 @@ public class ExtensionLoader<T> {
         return classes;
     }
 
-    // synchronized in getExtensionClasses
+    /**
+     * 加载该ExtensionLoader下type对应的相关的ExtensionLoader配置
+     *
+     * <p>
+     * 从配置文件中加载
+     * <ul>
+     * <li>META-INF/dubbo/internal/${type类型全类名}</li><br/>
+     * <li>META-INF/dubbo/internal/${type类型全类名的兼容版}</li><br/>
+     * <li>META-INF/dubbo/${type类型全类名}</li><br/>
+     * <li>META-INF/dubbo/${type类型全类名的兼容版}</li><br/>
+     * <li>META-INF/services/${type类型全类名}</li><br/>
+     * <li>META-INF/services/${type类型全类名的兼容版}</li><br/>
+     * </ul>
+     *
+     * @return type对应扩展的map
+     * @see #loadDirectory(Map, String, String)
+     */
     private Map<String, Class<?>> loadExtensionClasses() {
         cacheDefaultExtensionName();
 
@@ -654,6 +775,13 @@ public class ExtensionLoader<T> {
         cachedDefaultName = value.trim();
     }
 
+    /**
+     * 从指定的文件中加载type类型对应的Extension
+     *
+     * @param extensionClasses 存储结果map
+     * @param dir              目录
+     * @param type             文件名
+     */
     private void loadDirectory(Map<String, Class<?>> extensionClasses, String dir, String type) {
         String fileName = dir + type;
         try {
@@ -676,7 +804,18 @@ public class ExtensionLoader<T> {
         }
     }
 
-    private void loadResource(Map<String, Class<?>> extensionClasses, ClassLoader classLoader, java.net.URL resourceURL) {
+    /**
+     * 从指定的url读取相关的资源，解析成对应Extension
+     * <p>
+     * 文件中的注解为#
+     * </p>
+     *
+     * @param extensionClasses 存储结果map
+     * @param classLoader
+     * @param resourceURL      资源url
+     */
+    private void loadResource(Map<String, Class<?>> extensionClasses, ClassLoader classLoader,
+                              java.net.URL resourceURL) {
         try {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(resourceURL.openStream(), StandardCharsets.UTF_8))) {
                 String line;
@@ -710,32 +849,40 @@ public class ExtensionLoader<T> {
         }
     }
 
-    private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name) throws NoSuchMethodException {
+    /**
+     * 解析有效的配置信息，构建相应的信息
+     *
+     * @param extensionClasses 存储结果map
+     * @param resourceURL      资源url
+     * @param clazz            type的实现类
+     * @param name             待处理的type实现类型对应的名称
+     */
+    private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?>
+            clazz, String name) throws NoSuchMethodException {
         if (!type.isAssignableFrom(clazz)) {
             throw new IllegalStateException("Error occurred when loading extension class (interface: " +
                     type + ", class line: " + clazz.getName() + "), class "
                     + clazz.getName() + " is not subtype of interface.");
         }
-        if (clazz.isAnnotationPresent(Adaptive.class)) {
+        if (clazz.isAnnotationPresent(Adaptive.class)) { //type实现类带有@Adaptive注解，并存储进cachedAdaptiveClass中，只能有一个
             cacheAdaptiveClass(clazz);
-        } else if (isWrapperClass(clazz)) {
+        } else if (isWrapperClass(clazz)) { //type实现类有一个支持传递type带参的构造函数，也就是能组合另一个type，并存储进cachedWrapperClasses中
             cacheWrapperClass(clazz);
         } else {
-            clazz.getConstructor();
-            if (StringUtils.isEmpty(name)) {
+            clazz.getConstructor();//普通type实现类型的处理
+            if (StringUtils.isEmpty(name)) { //name为空，我们尝试下构建name
                 name = clazz.getSimpleName();
                 if (name.endsWith(type.getSimpleName())) {
                     name = name.substring(0, name.length() - type.getSimpleName().length());
                 }
                 name = name.toLowerCase();
             }
-
-            String[] names = NAME_SEPARATOR.split(name);
+            String[] names = NAME_SEPARATOR.split(name); //处理待处理的name构建构建相关结果
             if (ArrayUtils.isNotEmpty(names)) {
-                cacheActivateClass(clazz, names[0]);
+                cacheActivateClass(clazz, names[0]); //type实现类上存在Activate，我们使用首名字来构建信息。并存储在cachedActivates中
                 for (String n : names) {
-                    cacheName(clazz, n);
-                    saveInExtensionClass(extensionClasses, clazz, name);
+                    cacheName(clazz, n); //我们使用首名字来构建信息，并存储在cachedNames中。仅允许第一次使用
+                    saveInExtensionClass(extensionClasses, clazz, name); //放置结果的map中
                 }
             }
         }
@@ -836,6 +983,11 @@ public class ExtensionLoader<T> {
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 
+    /**
+     * type类型没有对应的实现携带相关的@Adaptive注解，使用编译器直接生成类
+     *
+     * @return AdaptiveExtension 类
+     */
     private Class<?> createAdaptiveExtensionClass() {
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
