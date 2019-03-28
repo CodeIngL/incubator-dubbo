@@ -87,6 +87,7 @@ import static org.apache.dubbo.common.Constants.REGISTRY_PROTOCOL;
 import static org.apache.dubbo.common.Constants.ROUTERS_CATEGORY;
 import static org.apache.dubbo.common.Constants.SIMPLIFIED_KEY;
 import static org.apache.dubbo.common.Constants.VALIDATION_KEY;
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
 import static org.apache.dubbo.common.utils.UrlUtils.classifyUrls;
 
 /**
@@ -273,6 +274,11 @@ public class RegistryProtocol implements Protocol {
         return registryFactory.getRegistry(registryUrl);
     }
 
+    /**
+     * 获得registryUrl
+     * @param originInvoker
+     * @return
+     */
     private URL getRegistryUrl(Invoker<?> originInvoker) {
         URL registryUrl = originInvoker.getUrl();
         if (REGISTRY_PROTOCOL.equals(registryUrl.getProtocol())) {
@@ -301,7 +307,7 @@ public class RegistryProtocol implements Protocol {
             // otherwise, the registry structure of zookeeper would be '/dubbo/path/providers',
             // but what we expect is '/dubbo/interface/providers'
             if (!providerUrl.getPath().equals(providerUrl.getParameter(Constants.INTERFACE_KEY))) {
-                if (StringUtils.isNotEmpty(extra_keys)) {
+                if (isNotEmpty(extra_keys)) {
                     extra_keys += ",";
                 }
                 extra_keys += Constants.INTERFACE_KEY;
@@ -347,23 +353,29 @@ public class RegistryProtocol implements Protocol {
     @Override
     @SuppressWarnings("unchecked")
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        //协议转换回来，当protcol为registry只是临时代表这个需要注册到注册中心上，但是真正的协议类型还是元信息中的registry的值（默认的注册中心是dubbo注册中心）
         url = URLBuilder.from(url)
                 .setProtocol(url.getParameter(REGISTRY_KEY, DEFAULT_REGISTRY))
                 .removeParameter(REGISTRY_KEY)
                 .build();
+        //获得注册中心，特定注册中心由url的protocol(协议）决定。ex:zookeeper
         Registry registry = registryFactory.getRegistry(url);
         if (RegistryService.class.equals(type)) {
+            //对于接口是RegistryService，直接获得Invoker后返回
             return proxyFactory.getInvoker((T) registry, type, url);
         }
 
         // group="a,b" or group="*"
+        //处理group配置项:group="a,b" or group="*"
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(REFER_KEY));
         String group = qs.get(Constants.GROUP_KEY);
-        if (group != null && group.length() > 0) {
+        if (isNotEmpty(group)) {
             if ((COMMA_SPLIT_PATTERN.split(group)).length > 1 || "*".equals(group)) {
+                //对于传递进来的接口引用，从属于多个组的，应使用MergeableCluster来聚合调用
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
+        //对于传递进来的接口引用，单个组的或者没有配置的，应使用默认的Cluster来聚集
         return doRefer(cluster, registry, type, url);
     }
 

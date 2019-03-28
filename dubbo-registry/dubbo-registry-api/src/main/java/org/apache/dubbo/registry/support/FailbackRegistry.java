@@ -44,15 +44,15 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     /*  retry task map */
 
-    private final ConcurrentMap<URL, FailedRegisteredTask> failedRegistered = new ConcurrentHashMap<URL, FailedRegisteredTask>();
+    private final ConcurrentMap<URL, FailedRegisteredTask> failedRegistered = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<URL, FailedUnregisteredTask> failedUnregistered = new ConcurrentHashMap<URL, FailedUnregisteredTask>();
+    private final ConcurrentMap<URL, FailedUnregisteredTask> failedUnregistered = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<Holder, FailedSubscribedTask> failedSubscribed = new ConcurrentHashMap<Holder, FailedSubscribedTask>();
+    private final ConcurrentMap<Holder, FailedSubscribedTask> failedSubscribed = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<Holder, FailedUnsubscribedTask> failedUnsubscribed = new ConcurrentHashMap<Holder, FailedUnsubscribedTask>();
+    private final ConcurrentMap<Holder, FailedUnsubscribedTask> failedUnsubscribed = new ConcurrentHashMap<>();
 
-    private final ConcurrentMap<Holder, FailedNotifiedTask> failedNotified = new ConcurrentHashMap<Holder, FailedNotifiedTask>();
+    private final ConcurrentMap<Holder, FailedNotifiedTask> failedNotified = new ConcurrentHashMap<>();
 
     /**
      * The time in milliseconds the retryExecutor will wait
@@ -62,6 +62,16 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
     private final HashedWheelTimer retryTimer;
 
+    /**
+     * 抽象类FailbackRegistry构造函数，服务于具体实现类，代表了可以失败重试的注册中心
+     * <ul>
+     * <li>从url中获得key为{@link Constants#REGISTRY_RETRY_PERIOD_KEY}的值。默认是5s</li><br/>
+     * <li>构建HashedWheelTimer准备处理失败重试</li><br/>
+     * </ul>
+     *
+     * @param url 注册的url
+     * @see AbstractRegistry#AbstractRegistry(URL)
+     */
     public FailbackRegistry(URL url) {
         super(url);
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
@@ -346,10 +356,10 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     @Override
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
-            throw new IllegalArgumentException("notify url == null");
+            throw new IllegalArgumentException("notify url is null");
         }
         if (listener == null) {
-            throw new IllegalArgumentException("notify listener == null");
+            throw new IllegalArgumentException("notify listener is null");
         }
         try {
             doNotify(url, listener, urls);

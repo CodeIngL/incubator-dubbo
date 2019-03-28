@@ -76,6 +76,20 @@ public abstract class AbstractRegistry implements Registry {
     // Local disk cache file
     private File file;
 
+    /**
+     * 抽象类AbstractRegistry构造函数，服务于抽象类FailbackRegistry，dubbo对注册中心概念的抽象，指出缓存
+     * <ul>
+     * <li>保存注册的url:{@link #registryUrl}</li><br/>
+     * <li>设定保存文件的标志{@link #syncSaveFile}。从url中键为{@link Constants#REGISTRY_FILESAVE_SYNC_KEY}对应的值，默认是false（异步保存）</li><br/>
+     * <li>设定保存文件路劲{@link #file}。从url中键为{@link Constants#FILE_KEY}对应的值，默认是${user.home}/.dubbo/dubbo-registry-${applicationName}-${url.getAddress}.cache"</li><br/>
+     * <li>加载文件中的配置到{@link #properties}</li><br/>
+     * <li>通知整个集群地址</li><br/>
+     * </ul>
+     *
+     * @param url 注册的url
+     * @see #loadProperties()
+     * @see #notify(List)
+     */
     public AbstractRegistry(URL url) {
         setUrl(url);
         // Start file save timer
@@ -92,7 +106,7 @@ public abstract class AbstractRegistry implements Registry {
         }
         this.file = file;
         // When starting the subscription center,
-        // we need to read the local cache file for future Registry fault tolerance processing.
+        // we need to read the local cache file for future Registry fault tolerance processing. 我们需要读取本地缓存文件以便将来进行Registry容错处理。
         loadProperties();
         notify(url.getBackupUrls());
     }
@@ -113,7 +127,7 @@ public abstract class AbstractRegistry implements Registry {
 
     protected void setUrl(URL url) {
         if (url == null) {
-            throw new IllegalArgumentException("registry url == null");
+            throw new IllegalArgumentException("registry url is null");
         }
         this.registryUrl = url;
     }
@@ -255,7 +269,7 @@ public abstract class AbstractRegistry implements Registry {
     @Override
     public void register(URL url) {
         if (url == null) {
-            throw new IllegalArgumentException("register url == null");
+            throw new IllegalArgumentException("register url is null");
         }
         if (logger.isInfoEnabled()) {
             logger.info("Register: " + url);
@@ -266,7 +280,7 @@ public abstract class AbstractRegistry implements Registry {
     @Override
     public void unregister(URL url) {
         if (url == null) {
-            throw new IllegalArgumentException("unregister url == null");
+            throw new IllegalArgumentException("unregister url is null");
         }
         if (logger.isInfoEnabled()) {
             logger.info("Unregister: " + url);
@@ -277,10 +291,10 @@ public abstract class AbstractRegistry implements Registry {
     @Override
     public void subscribe(URL url, NotifyListener listener) {
         if (url == null) {
-            throw new IllegalArgumentException("subscribe url == null");
+            throw new IllegalArgumentException("subscribe url is null");
         }
         if (listener == null) {
-            throw new IllegalArgumentException("subscribe listener == null");
+            throw new IllegalArgumentException("subscribe listener is null");
         }
         if (logger.isInfoEnabled()) {
             logger.info("Subscribe: " + url);
@@ -292,10 +306,10 @@ public abstract class AbstractRegistry implements Registry {
     @Override
     public void unsubscribe(URL url, NotifyListener listener) {
         if (url == null) {
-            throw new IllegalArgumentException("unsubscribe url == null");
+            throw new IllegalArgumentException("unsubscribe url is null");
         }
         if (listener == null) {
-            throw new IllegalArgumentException("unsubscribe listener == null");
+            throw new IllegalArgumentException("unsubscribe listener is null");
         }
         if (logger.isInfoEnabled()) {
             logger.info("Unsubscribe: " + url);
@@ -332,44 +346,71 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    /**
+     * 通知注册事件
+     * <ul>
+     * <li>检验整个集群urls合法性</li><br/>
+     * <li>遍历{@link #subscribed}，寻找能与备用urls匹配的映射元素</li><br/>
+     * <li>遍历元素的所有订阅者，尝试通知</li><br/>
+     * </ul>
+     *
+     * @param urls 注册中心的集群地址url列表，不是单纯的备机地址
+     * @see #notify(URL, NotifyListener, List)
+     */
     protected void notify(List<URL> urls) {
         if (CollectionUtils.isEmpty(urls)) {
             return;
         }
 
+        //遍历所有的监听者，对已经受订阅的相关url进行通知。
+        //通知订阅了相关的url（本集群的url)进行处理
         for (Map.Entry<URL, Set<NotifyListener>> entry : getSubscribed().entrySet()) {
             URL url = entry.getKey();
 
+            //对于不匹配的直接忽略掉，只需要和集群地址的第一个也就是主地址进行匹配就可以了
+            //这里是注册事件，对于url列表来说，其path为RegistryService，其interface为RegistryService
+            //因为urls集群除了host以及port可能存在的不同之外，其他的信息是全部相同的。
             if (!UrlUtils.isMatch(url, urls.get(0))) {
                 continue;
             }
 
+            //对于匹配的url。则需要进行通知
             Set<NotifyListener> listeners = entry.getValue();
-            if (listeners != null) {
-                for (NotifyListener listener : listeners) {
-                    try {
-                        notify(url, listener, filterEmpty(url, urls));
-                    } catch (Throwable t) {
-                        logger.error("Failed to notify registry event, urls: " + urls + ", cause: " + t.getMessage(), t);
-                    }
+            if (listeners == null) {
+                continue;
+            }
+            for (NotifyListener listener : listeners) {
+                try {
+                    notify(url, listener, filterEmpty(url, urls));
+                } catch (Throwable t) {
+                    logger.error("Failed to notify registry event, urls: " + urls + ", cause: " + t.getMessage(), t);
                 }
             }
         }
     }
 
+
     /**
-     * Notify changes from the Provider side.
+     * 通知事件
+     * <ul>
+     * <li>检验传入参数</li><br/>
+     * <li>遍历所有urls，寻找与url匹配的元素，获取元素中键为{@link Constants#CATEGORY_KEY}的值，默认{@link Constants#DEFAULT_CATEGORY}作为分组依据</li><br/>
+     * <li>合并相关信息到{@link #notified}</li><br/>
+     * <li>分组通知所有能和受订阅的url匹配上的url</li><br/>
+     * </ul>
      *
-     * @param url      consumer side url
-     * @param listener listener
-     * @param urls     provider latest urls
+     * @param url      受订阅的url
+     * @param listener url的订阅者
+     * @param urls     候选的url列表，其中可能存在元素和受订阅的url匹配
+     * @see #saveProperties(URL)
+     * @see NotifyListener#notify(List)；
      */
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
-            throw new IllegalArgumentException("notify url == null");
+            throw new IllegalArgumentException("notify url is null");
         }
         if (listener == null) {
-            throw new IllegalArgumentException("notify listener == null");
+            throw new IllegalArgumentException("notify listener is null");
         }
         if ((CollectionUtils.isEmpty(urls))
                 && !Constants.ANY_VALUE.equals(url.getServiceInterface())) {
@@ -379,7 +420,10 @@ public abstract class AbstractRegistry implements Registry {
         if (logger.isInfoEnabled()) {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
-        // keep every provider's category.
+        //队候选的url列表进行分组匹配，分组依据u.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY)一致
+        //key为目录的信息，value为对应目录的元信息列表集合
+        //不匹配的忽略的掉
+        //对传递进来的参数urls列表进行简单分组，由于是方法调用，面向的场景很多，也就无法保证该urls列表和url就是适配过的，因此这里还要进行一次适配。
         Map<String, List<URL>> result = new HashMap<>();
         for (URL u : urls) {
             if (UrlUtils.isMatch(url, u)) {
@@ -391,6 +435,10 @@ public abstract class AbstractRegistry implements Registry {
         if (result.size() == 0) {
             return;
         }
+        //合并上面的分组信息到notified
+
+        //尝试获得依据分组的缓存，一个url其可以有多个组。
+        //没有则新建
         Map<String, List<URL>> categoryNotified = notified.computeIfAbsent(url, u -> new ConcurrentHashMap<>());
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
             String category = entry.getKey();
