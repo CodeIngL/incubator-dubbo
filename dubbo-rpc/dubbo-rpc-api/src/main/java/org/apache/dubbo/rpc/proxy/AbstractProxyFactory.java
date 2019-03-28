@@ -25,6 +25,8 @@ import org.apache.dubbo.rpc.service.GenericService;
 
 import com.alibaba.dubbo.rpc.service.EchoService;
 
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
+
 /**
  * AbstractProxyFactory
  */
@@ -39,22 +41,21 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Class<?>[] interfaces = null;
         String config = invoker.getUrl().getParameter(Constants.INTERFACES);
-        if (config != null && config.length() > 0) {
+        if (isNotEmpty(config)) {
             String[] types = Constants.COMMA_SPLIT_PATTERN.split(config);
-            if (types != null && types.length > 0) {
-                interfaces = new Class<?>[types.length + 2];
-                interfaces[0] = invoker.getInterface();
-                interfaces[1] = EchoService.class;
-                for (int i = 0; i < types.length; i++) {
-                    // TODO can we load successfully for a different classloader?.
-                    interfaces[i + 2] = ReflectUtils.forName(types[i]);
-                }
+            interfaces = new Class<?>[types.length + 2];
+            interfaces[0] = invoker.getInterface();
+            interfaces[1] = EchoService.class;
+            for (int i = 0; i < types.length; i++) {
+                // TODO can we load successfully for a different classloader?.
+                interfaces[i + 2] = ReflectUtils.forName(types[i]);
             }
         }
         if (interfaces == null) {
             interfaces = new Class<?>[]{invoker.getInterface(), EchoService.class};
         }
 
+        //支持泛化调用
         if (!GenericService.class.isAssignableFrom(invoker.getInterface()) && generic) {
             int len = interfaces.length;
             Class<?>[] temp = interfaces;
