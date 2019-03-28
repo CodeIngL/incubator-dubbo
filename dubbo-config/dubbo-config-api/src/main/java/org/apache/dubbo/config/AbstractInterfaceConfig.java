@@ -174,20 +174,19 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         createApplicationIfAbsent();
 
         if (!application.isValid()) {
-            throw new IllegalStateException("No application config found or it's not a valid config! " +
-                    "Please add <dubbo:application name=\"...\" /> to your spring config.");
+            throw new IllegalStateException("No application's name found, it's required! Please check your application config.");
         }
 
         ApplicationModel.setApplication(application.getName());
 
         // backward compatibility
         String wait = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_KEY);
-        if (wait != null && wait.trim().length() > 0) {
-            System.setProperty(Constants.SHUTDOWN_WAIT_KEY, wait.trim());
+        if (StringUtils.isNotEmpty(wait)) {
+            System.setProperty(Constants.SHUTDOWN_WAIT_KEY, wait);
         } else {
             wait = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY);
-            if (wait != null && wait.trim().length() > 0) {
-                System.setProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY, wait.trim());
+            if (StringUtils.isNotEmpty(wait)) {
+                System.setProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY, wait);
             }
         }
     }
@@ -195,7 +194,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected void checkMonitor() {
         createMonitorIfAbsent();
         if (!monitor.isValid()) {
-            logger.info("There's no valid monitor config found, if you want to open monitor statistics for Dubbo, " +
+            logger.info("No monitor's address found, if you want to open monitor statistics for Dubbo, " +
                     "please make sure your monitor is configured properly.");
         }
     }
@@ -278,7 +277,6 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     /**
-     *
      * Load the registry and conversion it to {@link URL}, the priority order is: system property > dubbo registry config
      *
      * @param provider whether it is the provider side
@@ -321,7 +319,6 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     /**
-     *
      * Load the monitor config from the system properties and conversation it to {@link URL}
      *
      * @param registryURL
@@ -342,7 +339,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         appendParameters(map, application);
         String address = monitor.getAddress();
         String sysaddress = System.getProperty("dubbo.monitor.address");
-        if (sysaddress != null && sysaddress.length() > 0) {
+        if (StringUtils.isNotEmpty(sysaddress)) {
             address = sysaddress;
         }
         if (ConfigUtils.isNotEmpty(address)) {
@@ -407,23 +404,24 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             throw new IllegalStateException("The interface class " + interfaceClass + " is not a interface!");
         }
         // check if methods exist in the remote service interface
-        if (CollectionUtils.isNotEmpty(methods)) {
-            for (MethodConfig methodBean : methods) {
-                methodBean.setService(interfaceClass.getName());
-                methodBean.setServiceId(this.getId());
-                methodBean.refresh();
-                String methodName = methodBean.getName();
-                if (StringUtils.isEmpty(methodName)) {
-                    throw new IllegalStateException("<dubbo:method> name attribute is required! Please check: " +
-                            "<dubbo:service interface=\"" + interfaceClass.getName() + "\" ... >" +
-                            "<dubbo:method name=\"\" ... /></<dubbo:reference>");
-                }
+        if (CollectionUtils.isEmpty(methods)) {
+            return;
+        }
+        String className = interfaceClass.getName();
+        for (MethodConfig methodBean : methods) {
+            methodBean.setService(className);
+            methodBean.setServiceId(this.getId());
+            methodBean.refresh();
+            String methodName = methodBean.getName();
+            if (StringUtils.isEmpty(methodName)) {
+                throw new IllegalStateException("<dubbo:method> name attribute is required! Please check: " +
+                        "<dubbo:service interface=\"" + className + "\" ... >" +
+                        "<dubbo:method name=\"\" ... /></<dubbo:reference>");
+            }
 
-                boolean hasMethod = Arrays.stream(interfaceClass.getMethods()).anyMatch(method -> method.getName().equals(methodName));
-                if (!hasMethod) {
-                    throw new IllegalStateException("The interface " + interfaceClass.getName()
-                            + " not found method " + methodName);
-                }
+            boolean hasMethod = Arrays.stream(interfaceClass.getMethods()).anyMatch(method -> method.getName().equals(methodName));
+            if (!hasMethod) {
+                throw new IllegalStateException("The interface " + className + " not found method " + methodName);
             }
         }
     }
@@ -445,6 +443,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             normalizedMock = normalizedMock.substring(Constants.RETURN_PREFIX.length()).trim();
             try {
                 //Check whether the mock value is legal, if it is illegal, throw exception
+                //mock代码配置的时候，校验一下格式是否正常
                 MockInvoker.parseMockValue(normalizedMock);
             } catch (Exception e) {
                 throw new IllegalStateException("Illegal mock return in <dubbo:service/reference ... " +

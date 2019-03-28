@@ -63,6 +63,7 @@ import static org.apache.dubbo.common.Constants.LOCALHOST_VALUE;
 import static org.apache.dubbo.common.utils.NetUtils.getAvailablePort;
 import static org.apache.dubbo.common.utils.NetUtils.getLocalHost;
 import static org.apache.dubbo.common.utils.NetUtils.isInvalidPort;
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
 
 /**
  * ServiceConfig
@@ -439,7 +440,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             map.put(Constants.METHODS_KEY, Constants.ANY_VALUE);
         } else {
             String revision = Version.getVersion(interfaceClass, version);
-            if (revision != null && revision.length() > 0) {
+            if (isNotEmpty(revision)) {
                 map.put("revision", revision);
             }
 
@@ -495,7 +496,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
                         // For providers, this is used to enable custom proxy to generate invoker
                         String proxy = url.getParameter(Constants.PROXY_KEY);
-                        if (StringUtils.isNotEmpty(proxy)) {
+                        if (isNotEmpty(proxy)) {
                             registryURL = registryURL.addParameter(Constants.PROXY_KEY, proxy);
                         }
 
@@ -560,7 +561,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             for (ArgumentConfig argument : arguments) {
                 int argIndex = argument.getIndex();
                 String argType = argument.getType();
-                if (StringUtils.isNotEmpty(argType)) { //ArgumentConfig has a type value
+                if (isNotEmpty(argType)) { //ArgumentConfig has a type value
                     for (Method method : interfaceClass.getMethods()) { //methodConfig matched interface's method by there's name
                         String methodName = method.getName();
                         if (!methodName.equals(methodConfig.getName())) {
@@ -760,6 +761,10 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return port;
     }
 
+    /**
+     * 值不存在时，从候选的配置中尝试导出值
+     * @see ReferenceConfig#completeCompoundConfigs()
+     */
     private void completeCompoundConfigs() {
         if (provider != null) {
             if (application == null) {

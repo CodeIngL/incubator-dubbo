@@ -19,7 +19,13 @@ package org.apache.dubbo.config;
 import org.apache.dubbo.common.utils.StringUtils;
 
 /**
- * The service consumer default configuration
+ * <h1>
+ * ConsumerConfig
+ * </h1>
+ * <p>
+ * ReferenceConfig的配置模板类，提供多个ReferenceConfig下的部分可以进行公共配置的模板配置，用于减少相关的配置项进行配置
+ * <p>
+ * 另一种形式的表达可以认为，其提供了默认值，当ReferenceConfig的值不存在时，使用这些默认值作为后备选项
  *
  * @export
  */

@@ -55,6 +55,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static java.lang.Thread.currentThread;
+import static org.apache.dubbo.common.Constants.REGISTRY_PROTOCOL;
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
+
 
 /**
  * ReferenceConfig
@@ -221,6 +225,14 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         checkMetadataReport();
     }
 
+    /**
+     * 服务引用的入口。<br/>
+     * 获得配置接口对应的服务引用实现。<br/>
+     * tip：一旦销毁就不能引用
+     *
+     * @return rpc接口的代理, 包装了网络细节
+     * @see #init()
+     */
     public synchronized T get() {
         checkAndUpdateSubConfigs();
 
@@ -250,20 +262,32 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         ref = null;
     }
 
+    /**
+     * 服务引用入口(重量操作)
+     * <p>
+     * <ul>
+     * <li>对配置属性进行校验，对元信息{@link URL}进行信息生成</li><br/>
+     * <li>实现服务引用获得{@link Invoker}</li><br/>
+     * <li>包装{@link Invoker}获得相应代理</li><br/>
+     * </ul>
+     *
+     * @see #createProxy
+     */
     private void init() {
         if (initialized) {
             return;
         }
         initialized = true;
+        //检查stub或者local设置
         checkStubAndLocal(interfaceClass);
+        //检查mock
         checkMock(interfaceClass);
         Map<String, String> map = new HashMap<String, String>();
-
         map.put(Constants.SIDE_KEY, Constants.CONSUMER_SIDE);
         appendRuntimeParameters(map);
         if (!isGeneric()) {
             String revision = Version.getVersion(interfaceClass, version);
-            if (revision != null && revision.length() > 0) {
+            if (isNotEmpty(revision)) {
                 map.put("revision", revision);
             }
 
@@ -321,6 +345,14 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         return new ConsumerModel(serviceKey, serviceInterface, ref, methods, attributes);
     }
+
+    /**
+     * 创建代理
+     * 根据本身的配置，或者元信息中的配置信息，完成不同方式的引用
+     *
+     * @param map 元信息中的参数配置信息
+     * @return 具体的代理实现
+     */
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
     private T createProxy(Map<String, String> map) {
         if (shouldJvmRefer(map)) {
@@ -330,19 +362,17 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
         } else {
-            if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
+            if (isNotEmpty(url)) { // user specified URL, could be peer-to-peer address, or register center's address.
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
-                if (us != null && us.length > 0) {
-                    for (String u : us) {
-                        URL url = URL.valueOf(u);
-                        if (StringUtils.isEmpty(url.getPath())) {
-                            url = url.setPath(interfaceName);
-                        }
-                        if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
-                            urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
-                        } else {
-                            urls.add(ClusterUtils.mergeUrl(url, map));
-                        }
+                for (String u : us) {
+                    URL url = URL.valueOf(u);
+                    if (StringUtils.isEmpty(url.getPath())) {
+                        url = url.setPath(interfaceName);
+                    }
+                    if (REGISTRY_PROTOCOL.equals(url.getProtocol())) {
+                        urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
+                    } else {
+                        urls.add(ClusterUtils.mergeUrl(url, map));
                     }
                 }
             } else { // assemble URL from register center's configuration
@@ -369,7 +399,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 URL registryURL = null;
                 for (URL url : urls) {
                     invokers.add(refprotocol.refer(interfaceClass, url));
-                    if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
+                    if (REGISTRY_PROTOCOL.equals(url.getProtocol())) {
                         registryURL = url; // use last registry url
                     }
                 }
@@ -418,7 +448,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         boolean isJvmRefer;
         if (isInjvm() == null) {
             // if a url is specified, don't do local reference
-            if (url != null && url.length() > 0) {
+            if (isNotEmpty(url)) {
                 isJvmRefer = false;
             } else {
                 // by default, reference local service if there is
@@ -473,6 +503,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 );
     }
 
+    /**
+     * 值不存在时，从候选的配置中尝试导出值
+     * @see ServiceConfig#completeCompoundConfigs()
+     */
     private void completeCompoundConfigs() {
         if (consumer != null) {
             if (application == null) {
@@ -619,7 +653,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                     resolveFile = userResolveFile.getAbsolutePath();
                 }
             }
-            if (resolveFile != null && resolveFile.length() > 0) {
+            if (isNotEmpty(resolveFile)) {
                 Properties properties = new Properties();
                 try (FileInputStream fis = new FileInputStream(new File(resolveFile))) {
                     properties.load(fis);
@@ -630,7 +664,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 resolve = properties.getProperty(interfaceName);
             }
         }
-        if (resolve != null && resolve.length() > 0) {
+        if (isNotEmpty(resolve)) {
             url = resolve;
             if (logger.isWarnEnabled()) {
                 if (resolveFile != null) {
