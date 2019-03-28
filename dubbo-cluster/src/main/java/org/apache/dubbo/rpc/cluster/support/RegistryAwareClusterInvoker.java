@@ -16,9 +16,6 @@
  */
 package org.apache.dubbo.rpc.cluster.support;
 
-import org.apache.dubbo.common.Constants;
-import org.apache.dubbo.common.logger.Logger;
-import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.Result;
@@ -28,12 +25,14 @@ import org.apache.dubbo.rpc.cluster.LoadBalance;
 
 import java.util.List;
 
+import static org.apache.dubbo.common.Constants.DEFAULT_KEY;
+import static org.apache.dubbo.common.Constants.REGISTRY_KEY;
+
 /**
  *
  */
 public class RegistryAwareClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(RegistryAwareClusterInvoker.class);
 
     public RegistryAwareClusterInvoker(Directory<T> directory) {
         super(directory);
@@ -43,12 +42,14 @@ public class RegistryAwareClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         // First, pick the invoker (XXXClusterInvoker) that comes from the local registry, distinguish by a 'default' key.
+        // 首先，选择来自本地注册表的调用者（XXXClusterInvoker），用“default”键区分。
         for (Invoker<T> invoker : invokers) {
-            if (invoker.isAvailable() && invoker.getUrl().getParameter(Constants.REGISTRY_KEY + "." + Constants.DEFAULT_KEY, false)) {
+            if (invoker.isAvailable() && invoker.getUrl().getParameter(REGISTRY_KEY + "." + DEFAULT_KEY, false)) {
                 return invoker.invoke(invocation);
             }
         }
         // If none of the invokers has a local signal, pick the first one available.
+        // 如果没有任何调用者有本地信号，请选择第一个可用的信号
         for (Invoker<T> invoker : invokers) {
             if (invoker.isAvailable()) {
                 return invoker.invoke(invocation);
