@@ -60,6 +60,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static org.apache.dubbo.common.utils.StringUtils.isEmpty;
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
+
 /**
  * dubbo protocol support.
  */
@@ -271,13 +274,13 @@ public class DubboProtocol extends AbstractProtocol {
 
         //export an stub service for dispatching event
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT);
-        Boolean isCallbackservice = url.getParameter(Constants.IS_CALLBACK_SERVICE, false);
-        if (isStubSupportEvent && !isCallbackservice) {
+        Boolean isCallbackService = url.getParameter(Constants.IS_CALLBACK_SERVICE, false);
+        if (isStubSupportEvent && !isCallbackService) {
             String stubServiceMethods = url.getParameter(Constants.STUB_EVENT_METHODS_KEY);
-            if (stubServiceMethods == null || stubServiceMethods.length() == 0) {
+            if (isEmpty(stubServiceMethods)) {
                 if (logger.isWarnEnabled()) {
                     logger.warn(new IllegalStateException("consumer [" + url.getParameter(Constants.INTERFACE_KEY) +
-                            "], has set stubproxy support event ,but no stub methods founded."));
+                            "], has set stubProxy support event ,but no stub methods founded."));
                 }
 
             } else {
@@ -291,9 +294,13 @@ public class DubboProtocol extends AbstractProtocol {
         return exporter;
     }
 
+    /**
+     * 为指定的url开启一个服务，如果这个服务代表了服务端的话。
+     * @param url
+     */
     private void openServer(URL url) {
         // find server.
-        String key = url.getAddress();
+        String key = url.getAddress(); //地址是一样，这样能保证仅仅开启少量网络监听服务
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY, true);
         if (isServer) {
@@ -322,7 +329,7 @@ public class DubboProtocol extends AbstractProtocol {
                 .build();
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
 
-        if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
+        if (isNotEmpty(str) && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
         }
 
@@ -334,7 +341,7 @@ public class DubboProtocol extends AbstractProtocol {
         }
 
         str = url.getParameter(Constants.CLIENT_KEY);
-        if (str != null && str.length() > 0) {
+        if (isNotEmpty(str)) {
             Set<String> supportedTypes = ExtensionLoader.getExtensionLoader(Transporter.class).getSupportedExtensions();
             if (!supportedTypes.contains(str)) {
                 throw new RpcException("Unsupported client type: " + str);
@@ -346,7 +353,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     private void optimizeSerialization(URL url) throws RpcException {
         String className = url.getParameter(Constants.OPTIMIZER_KEY, "");
-        if (StringUtils.isEmpty(className) || optimizers.contains(className)) {
+        if (isEmpty(className) || optimizers.contains(className)) {
             return;
         }
 
@@ -426,10 +433,16 @@ public class DubboProtocol extends AbstractProtocol {
     }
 
     /**
-     * Get shared connection
+     * 获取共享连接
+     * <ul>尝试操作缓存结构{@link #referenceClientMap}获得客户端实例
+     * <li>构建键:url的地址信息{@link URL#getAddress()}</li><br/>
+     * <li>尝试在缓存映射中获得客户端</li><br/>
+     * <li>检验客户端连接的有效性</li><br/>
+     * </ul>
      *
-     * @param url
+     * @param url 元信息
      * @param connectNum connectNum must be greater than or equal to 1
+     * @return 客户端
      */
     private List<ReferenceCountExchangeClient> getSharedClient(URL url, int connectNum) {
         String key = url.getAddress();
