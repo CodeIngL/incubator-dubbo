@@ -32,6 +32,9 @@ import java.util.Map;
  */
 class InjvmInvoker<T> extends AbstractInvoker<T> {
 
+    /**
+     * 标识要引用服务的key
+     */
     private final String key;
 
     private final Map<String, Exporter<?>> exporterMap;

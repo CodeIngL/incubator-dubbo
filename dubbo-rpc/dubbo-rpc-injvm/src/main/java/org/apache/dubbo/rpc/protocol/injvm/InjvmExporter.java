@@ -27,8 +27,14 @@ import java.util.Map;
  */
 class InjvmExporter<T> extends AbstractExporter<T> {
 
+    /**
+     * 服务key
+     */
     private final String key;
 
+    /**
+     * 服务key和对应export的缓存
+     */
     private final Map<String, Exporter<?>> exporterMap;
 
     InjvmExporter(Invoker<T> invoker, String key, Map<String, Exporter<?>> exporterMap) {

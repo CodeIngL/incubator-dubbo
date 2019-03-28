@@ -30,8 +30,13 @@ import org.apache.dubbo.rpc.support.ProtocolUtils;
 
 import java.util.Map;
 
+import static org.apache.dubbo.common.Constants.GENERIC_KEY;
+import static org.apache.dubbo.common.utils.CollectionUtils.isNotEmptyMap;
+
 /**
  * InjvmProtocol
+ *
+ * injvm协议，在本机暴露
  */
 public class InjvmProtocol extends AbstractProtocol implements Protocol {
 
@@ -51,13 +56,19 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         return INSTANCE;
     }
 
+    /**
+     * 获得对应的exporter，
+     * @param map
+     * @param key
+     * @return
+     */
     static Exporter<?> getExporter(Map<String, Exporter<?>> map, URL key) {
         Exporter<?> result = null;
 
         if (!key.getServiceKey().contains("*")) {
             result = map.get(key.getServiceKey());
         } else {
-            if (CollectionUtils.isNotEmptyMap(map)) {
+            if (isNotEmptyMap(map)) {
                 for (Exporter<?> exporter : map.values()) {
                     if (UrlUtils.isServiceKeyMatch(key, exporter.getInvoker().getUrl())) {
                         result = exporter;
@@ -67,14 +78,10 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
             }
         }
 
-        if (result == null) {
+        if (result != null && ProtocolUtils.isGeneric(result.getInvoker().getUrl().getParameter(GENERIC_KEY))){
             return null;
-        } else if (ProtocolUtils.isGeneric(
-                result.getInvoker().getUrl().getParameter(Constants.GENERIC_KEY))) {
-            return null;
-        } else {
-            return result;
         }
+        return result;
     }
 
     @Override
@@ -87,11 +94,31 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         return new InjvmExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);
     }
 
+    /**
+     * injvm内部的引用，
+     * @param serviceType 目标接口
+     * @param url  URL address for the remote service 目标的url地址
+     * @param <T> InjvmInvoker
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(Class<T> serviceType, URL url) throws RpcException {
         return new InjvmInvoker<T>(serviceType, url, url.getServiceKey(), exporterMap);
     }
 
+    /**
+     * 是否是injvm引用
+     * <ul>
+     *     <li></li>
+     *     <li></li>
+     *     <li>返回调用是远程调用</li>
+     *     <li></li>
+     *     <li></li>
+     * </ul>
+     * @param url
+     * @return
+     */
     public boolean isInjvmRefer(URL url) {
         String scope = url.getParameter(Constants.SCOPE_KEY);
         // Since injvm protocol is configured explicitly, we don't need to set any extra flag, use normal refer process.
@@ -102,7 +129,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         } else if (Constants.SCOPE_REMOTE.equals(scope)) {
             // it's declared as remote reference
             return false;
-        } else if (url.getParameter(Constants.GENERIC_KEY, false)) {
+        } else if (url.getParameter(GENERIC_KEY, false)) {
             // generic invocation is not local reference
             return false;
         } else if (getExporter(exporterMap, url) != null) {
