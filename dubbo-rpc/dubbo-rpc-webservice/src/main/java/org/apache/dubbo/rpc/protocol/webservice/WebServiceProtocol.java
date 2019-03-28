@@ -50,6 +50,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WebServiceProtocol.
+ *
+ * WebService的支持
+ *
+ * 这里的WebService是 over http
  */
 public class WebServiceProtocol extends AbstractProxyProtocol {
 
@@ -57,6 +61,7 @@ public class WebServiceProtocol extends AbstractProxyProtocol {
 
     private final Map<String, HttpServer> serverMap = new ConcurrentHashMap<String, HttpServer>();
 
+    //总线
     private final ExtensionManagerBus bus = new ExtensionManagerBus();
 
     private final HTTPTransportFactory transportFactory = new HTTPTransportFactory();
@@ -77,6 +82,15 @@ public class WebServiceProtocol extends AbstractProxyProtocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 暴露
+     * @param impl
+     * @param type
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     protected <T> Runnable doExport(T impl, Class<T> type, URL url) throws RpcException {
         String addr = getAddr(url);
@@ -85,6 +99,7 @@ public class WebServiceProtocol extends AbstractProxyProtocol {
             httpServer = httpBinder.bind(url, new WebServiceHandler());
             serverMap.put(addr, httpServer);
         }
+        //cxf的api形式进行暴露
         final ServerFactoryBean serverFactoryBean = new ServerFactoryBean();
         serverFactoryBean.setAddress(url.getAbsolutePath());
         serverFactoryBean.setServiceClass(type);
@@ -105,6 +120,14 @@ public class WebServiceProtocol extends AbstractProxyProtocol {
         };
     }
 
+    /**
+     * cxf客户端的包装
+     * @param serviceType
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T doRefer(final Class<T> serviceType, final URL url) throws RpcException {
@@ -139,6 +162,13 @@ public class WebServiceProtocol extends AbstractProxyProtocol {
 
         private volatile ServletController servletController;
 
+        /**
+         * webservice的http处理逻辑入口
+         * @param request  request.
+         * @param response response.
+         * @throws IOException
+         * @throws ServletException
+         */
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
             if (servletController == null) {
