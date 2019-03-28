@@ -34,6 +34,12 @@ import static org.apache.dubbo.common.Constants.QOS_ENABLE;
 import static org.apache.dubbo.common.Constants.QOS_PORT;
 
 
+/**
+ * Qos的支持
+ *
+ * 支持注册中心的url，根据qos.enable来开启，默认开启。
+ * 支持服务端和消费端
+ */
 public class QosProtocolWrapper implements Protocol {
 
     private final Logger logger = LoggerFactory.getLogger(QosProtocolWrapper.class);
@@ -44,7 +50,7 @@ public class QosProtocolWrapper implements Protocol {
 
     public QosProtocolWrapper(Protocol protocol) {
         if (protocol == null) {
-            throw new IllegalArgumentException("protocol == null");
+            throw new IllegalArgumentException("protocol is null");
         }
         this.protocol = protocol;
     }
@@ -78,6 +84,13 @@ public class QosProtocolWrapper implements Protocol {
         stopServer();
     }
 
+    /**
+     * 开启一个Qos服务
+     * 1. 由qos.enable决定是否开启，默认开启
+     * 2. 由qos.port决定服务的端口，默认22222
+     * 3. 由qos.accept.foreign.ip决定是否支持外部ip访问，默认不支持
+     * @param url
+     */
     private void startQosServer(URL url) {
         try {
             if (!hasStarted.compareAndSet(false, true)) {
