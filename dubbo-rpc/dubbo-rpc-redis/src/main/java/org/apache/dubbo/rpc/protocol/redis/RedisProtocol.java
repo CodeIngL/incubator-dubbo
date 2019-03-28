@@ -48,6 +48,10 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * RedisProtocol
+ *
+ * 仅仅支持消费端，只支持get，set，delete的语义。没有指定，则目标的方法需要名字一样，否则需要和url中的参数对应的值一样
+ * 和基于ProxyProtocol的不同，消费端，就是将数据写入or读取自redis服务
+ *
  */
 public class RedisProtocol extends AbstractProtocol {
 
@@ -108,45 +112,50 @@ public class RedisProtocol extends AbstractProtocol {
             final String delete = url.getParameter("delete", Map.class.equals(type) ? "remove" : "delete");
             return new AbstractInvoker<T>(type, url) {
                 @Override
-                protected Result doInvoke(Invocation invocation) throws Throwable {
+                protected Result doInvoke(Invocation inv) throws Throwable {
                     Jedis jedis = null;
+                    String typeName = type.getName();
+                    String methodName = inv.getMethodName();
+                    Object[] args = inv.getArguments();
                     try {
                         jedis = jedisPool.getResource();
-
-                        if (get.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 1) {
-                                throw new IllegalArgumentException("The redis get method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                        if (get.equals(methodName)) {//方法名相等，有着get的语义。只能有一个入参
+                            if (args.length != 1) {
+                                throw new IllegalArgumentException("The redis get method arguments mismatch, must only one arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            byte[] value = jedis.get(String.valueOf(invocation.getArguments()[0]).getBytes());
+                            //获得存储
+                            byte[] value = jedis.get(String.valueOf(args[0]).getBytes());
+                            //没有返回空结果
                             if (value == null) {
                                 return new RpcResult();
                             }
+                            //序列化序列值
                             ObjectInput oin = getSerialization(url).deserialize(url, new ByteArrayInputStream(value));
                             return new RpcResult(oin.readObject());
-                        } else if (set.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 2) {
-                                throw new IllegalArgumentException("The redis set method arguments mismatch, must be two arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                        } else if (set.equals(methodName)) {//方法名相等，有着set的语义。只能有两个入参
+                            if (args.length != 2) {
+                                throw new IllegalArgumentException("The redis set method arguments mismatch, must be two arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            byte[] key = String.valueOf(invocation.getArguments()[0]).getBytes();
+                            byte[] key = String.valueOf(args[0]).getBytes(); //第一个参数是key
                             ByteArrayOutputStream output = new ByteArrayOutputStream();
-                            ObjectOutput value = getSerialization(url).serialize(url, output);
-                            value.writeObject(invocation.getArguments()[1]);
+                            ObjectOutput value = getSerialization(url).serialize(url, output); //序列化第二个参数的数据
+                            value.writeObject(args[1]);
                             jedis.set(key, output.toByteArray());
-                            if (expiry > 1000) {
+                            if (expiry > 1000) { //expire>1000
                                 jedis.expire(key, expiry / 1000);
                             }
                             return new RpcResult();
-                        } else if (delete.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 1) {
-                                throw new IllegalArgumentException("The redis delete method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                        } else if (delete.equals(methodName)) {//方法名相等，有着delete的语义。只能有一个入参
+                            if (args.length != 1) {
+                                throw new IllegalArgumentException("The redis delete method arguments mismatch, must only one arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            jedis.del(String.valueOf(invocation.getArguments()[0]).getBytes());
+                            jedis.del(String.valueOf(args[0]).getBytes());
                             return new RpcResult();
                         } else {
-                            throw new UnsupportedOperationException("Unsupported method " + invocation.getMethodName() + " in redis service.");
+                            throw new UnsupportedOperationException("Unsupported method " + methodName + " in redis service.");
                         }
                     } catch (Throwable t) {
-                        RpcException re = new RpcException("Failed to invoke redis service method. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url + ", cause: " + t.getMessage(), t);
+                        RpcException re = new RpcException("Failed to invoke redis service method. interface: " + typeName + ", method: " + methodName + ", url: " + url + ", cause: " + t.getMessage(), t);
                         if (t instanceof TimeoutException || t instanceof SocketTimeoutException) {
                             re.setCode(RpcException.TIMEOUT_EXCEPTION);
                         } else if (t instanceof JedisConnectionException || t instanceof IOException) {
