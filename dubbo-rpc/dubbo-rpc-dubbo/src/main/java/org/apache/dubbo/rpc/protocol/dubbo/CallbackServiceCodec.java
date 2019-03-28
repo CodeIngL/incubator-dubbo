@@ -249,14 +249,11 @@ class CallbackServiceCodec {
         Object[] args = inv.getArguments();
         Class<?>[] pts = inv.getParameterTypes();
         switch (callbackStatus) {
-            case CallbackServiceCodec.CALLBACK_NONE:
-                return args[paraIndex];
             case CallbackServiceCodec.CALLBACK_CREATE:
-                inv.setAttachment(INV_ATT_CALLBACK_KEY + paraIndex, exportOrUnexportCallbackService(channel, url, pts[paraIndex], args[paraIndex], true));
-                return null;
             case CallbackServiceCodec.CALLBACK_DESTROY:
-                inv.setAttachment(INV_ATT_CALLBACK_KEY + paraIndex, exportOrUnexportCallbackService(channel, url, pts[paraIndex], args[paraIndex], false));
+                inv.setAttachment(INV_ATT_CALLBACK_KEY + paraIndex, exportOrUnexportCallbackService(channel, url, pts[paraIndex], args[paraIndex], callbackStatus == CALLBACK_CREATE));
                 return null;
+            case CALLBACK_NONE:
             default:
                 return args[paraIndex];
         }
@@ -274,23 +271,17 @@ class CallbackServiceCodec {
             }
             return inObject;
         }
-        byte callbackstatus = isCallBack(url, inv.getMethodName(), paraIndex);
-        switch (callbackstatus) {
-            case CallbackServiceCodec.CALLBACK_NONE:
-                return inObject;
-            case CallbackServiceCodec.CALLBACK_CREATE:
+        byte callbackStatus = isCallBack(url, inv.getMethodName(), paraIndex);
+        switch (callbackStatus) {
+            case CALLBACK_CREATE:
+            case CALLBACK_DESTROY:
                 try {
-                    return referOrDestroyCallbackService(channel, url, pts[paraIndex], inv, Integer.parseInt(inv.getAttachment(INV_ATT_CALLBACK_KEY + paraIndex)), true);
+                    return referOrDestroyCallbackService(channel, url, pts[paraIndex], inv, Integer.parseInt(inv.getAttachment(INV_ATT_CALLBACK_KEY + paraIndex)), callbackStatus == CALLBACK_CREATE);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
                     throw new IOException(StringUtils.toString(e));
                 }
-            case CallbackServiceCodec.CALLBACK_DESTROY:
-                try {
-                    return referOrDestroyCallbackService(channel, url, pts[paraIndex], inv, Integer.parseInt(inv.getAttachment(INV_ATT_CALLBACK_KEY + paraIndex)), false);
-                } catch (Exception e) {
-                    throw new IOException(StringUtils.toString(e));
-                }
+            case CALLBACK_NONE:
             default:
                 return inObject;
         }
