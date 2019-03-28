@@ -49,6 +49,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * HttpProtocol
+ *
+ * httpProtocol支持httpInvoker。
  */
 public class HttpProtocol extends AbstractProxyProtocol {
 
