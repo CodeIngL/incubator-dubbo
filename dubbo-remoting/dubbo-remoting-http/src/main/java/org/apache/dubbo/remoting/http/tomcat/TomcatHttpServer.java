@@ -31,6 +31,9 @@ import org.apache.catalina.startup.Tomcat;
 
 import java.io.File;
 
+/**
+ * 基于Tomcat的服务，独立的应用，不依赖于外部web容器
+ */
 public class TomcatHttpServer extends AbstractHttpServer {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatHttpServer.class);
