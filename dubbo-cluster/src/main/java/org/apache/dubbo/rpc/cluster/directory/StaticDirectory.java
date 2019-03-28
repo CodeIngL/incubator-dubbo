@@ -92,6 +92,13 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
         this.setRouterChain(routerChain);
     }
 
+    /**
+     * 显示invocation对应的Invoker列表
+     * 使用routerChain进行筛选
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     protected List<Invoker<T>> doList(Invocation invocation) throws RpcException {
         List<Invoker<T>> finalInvokers = invokers;
