@@ -38,8 +38,14 @@ import java.net.SocketTimeoutException;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
+
 /**
  * MemcachedProtocol
+ *
+ * 仅仅支持消费端，只支持get，set，delete的语义。没有指定，则目标的方法需要名字一样，否则需要和url中的参数对应的值一样
+ *
+ * 和基于ProxyProtocol的不同，消费端，就是将数据写入or读取自memcached服务
  */
 public class MemcachedProtocol extends AbstractProtocol {
 
@@ -60,7 +66,7 @@ public class MemcachedProtocol extends AbstractProtocol {
         try {
             String address = url.getAddress();
             String backup = url.getParameter(Constants.BACKUP_KEY);
-            if (backup != null && backup.length() > 0) {
+            if (isNotEmpty(backup)) {
                 address += "," + backup;
             }
             MemcachedClientBuilder builder = new XMemcachedClientBuilder(AddrUtil.getAddresses(address));
@@ -71,30 +77,33 @@ public class MemcachedProtocol extends AbstractProtocol {
             final String delete = url.getParameter("delete", Map.class.equals(type) ? "remove" : "delete");
             return new AbstractInvoker<T>(type, url) {
                 @Override
-                protected Result doInvoke(Invocation invocation) throws Throwable {
+                protected Result doInvoke(Invocation inv) throws Throwable {
+                    String typeName = type.getName();
+                    String methodName = inv.getMethodName();
+                    Object[] args = inv.getArguments();
                     try {
-                        if (get.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 1) {
-                                throw new IllegalArgumentException("The memcached get method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                        if (get.equals(methodName)) {
+                            if (args.length != 1) {//方法名相等，有着get的语义。只能有一个入参
+                                throw new IllegalArgumentException("The memcached get method arguments mismatch, must only one arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            return new RpcResult(memcachedClient.get(String.valueOf(invocation.getArguments()[0])));
-                        } else if (set.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 2) {
-                                throw new IllegalArgumentException("The memcached set method arguments mismatch, must be two arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                            return new RpcResult(memcachedClient.get(String.valueOf(args[0])));
+                        } else if (set.equals(methodName)) {//方法名相等，有着set的语义。只能有两个入参
+                            if (args.length != 2) {
+                                throw new IllegalArgumentException("The memcached set method arguments mismatch, must be two arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            memcachedClient.set(String.valueOf(invocation.getArguments()[0]), expiry, invocation.getArguments()[1]);
+                            memcachedClient.set(String.valueOf(args[0]), expiry, args[1]);
                             return new RpcResult();
-                        } else if (delete.equals(invocation.getMethodName())) {
-                            if (invocation.getArguments().length != 1) {
-                                throw new IllegalArgumentException("The memcached delete method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
+                        } else if (delete.equals(methodName)) {//方法名相等，有着delete的语义。只能有一个入参
+                            if (args.length != 1) {
+                                throw new IllegalArgumentException("The memcached delete method arguments mismatch, must only one arguments. interface: " + typeName + ", method: " + methodName + ", url: " + url);
                             }
-                            memcachedClient.delete(String.valueOf(invocation.getArguments()[0]));
+                            memcachedClient.delete(String.valueOf(args[0]));
                             return new RpcResult();
                         } else {
-                            throw new UnsupportedOperationException("Unsupported method " + invocation.getMethodName() + " in memcached service.");
+                            throw new UnsupportedOperationException("Unsupported method " + methodName + " in memcached service.");
                         }
                     } catch (Throwable t) {
-                        RpcException re = new RpcException("Failed to invoke memcached service method. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url + ", cause: " + t.getMessage(), t);
+                        RpcException re = new RpcException("Failed to invoke memcached service method. interface: " + typeName + ", method: " + methodName + ", url: " + url + ", cause: " + t.getMessage(), t);
                         if (t instanceof TimeoutException || t instanceof SocketTimeoutException) {
                             re.setCode(RpcException.TIMEOUT_EXCEPTION);
                         } else if (t instanceof MemcachedException || t instanceof IOException) {
