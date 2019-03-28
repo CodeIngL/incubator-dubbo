@@ -39,12 +39,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 
 public abstract class Proxy {
-    public static final InvocationHandler RETURN_NULL_INVOKER = (proxy, method, args) -> null;
-    public static final InvocationHandler THROW_UNSUPPORTED_INVOKER = new InvocationHandler() {
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) {
-            throw new UnsupportedOperationException("Method [" + ReflectUtils.getName(method) + "] unimplemented.");
-        }
+    public static final InvocationHandler THROW_UNSUPPORTED_INVOKER = (proxy, method, args) -> {
+        throw new UnsupportedOperationException("Method [" + ReflectUtils.getName(method) + "] unimplemented.");
     };
     private static final AtomicLong PROXY_CLASS_COUNTER = new AtomicLong(0);
     private static final String PACKAGE_NAME = Proxy.class.getPackage().getName();
@@ -66,9 +62,18 @@ public abstract class Proxy {
     }
 
     /**
-     * Get proxy.
+     * 获得代理
+     * 该代理会实现传递进来的所有接口
+     * <p>
+     * <ul>
+     * <li>检查接口数组长度，java规范限定</li>
+     * <li>连接接口数组[com.codeL.A,com.codeL.B]-->com.codeL.A;com.codeL.B为key</li>
+     * <li>获得入参类加载器对应的缓存，无则新建</li>
+     * <li>尝试从缓存中使用key获得相应的代理</li>
+     * <li>见代码注释</li>
+     * </ul>
      *
-     * @param cl  class loader.
+     * @param cl   class loader.
      * @param ics interface class array.
      * @return Proxy instance.
      */
@@ -107,6 +112,7 @@ public abstract class Proxy {
         }
 
         Proxy proxy = null;
+        //并发加载时，锁定
         synchronized (cache) {
             do {
                 Object value = cache.get(key);
@@ -130,18 +136,23 @@ public abstract class Proxy {
             while (true);
         }
 
+        //开始构建代理实现类
         long id = PROXY_CLASS_COUNTER.getAndIncrement();
         String pkg = null;
         ClassGenerator ccp = null, ccm = null;
         try {
             ccp = ClassGenerator.newInstance(cl);
 
+            //所有方法的描述符，主要排除了不同接口下的相同方法，只要实现一次就可以了。
             Set<String> worked = new HashSet<>();
+            //所有方法的实现入队，因此对新增的方法就是当前的位置
             List<Method> methods = new ArrayList<>();
 
             for (int i = 0; i < ics.length; i++) {
-                if (!Modifier.isPublic(ics[i].getModifiers())) {
-                    String npkg = ics[i].getPackage().getName();
+                Class interfaceCls = ics[i];
+                //检查实现接口的可访问行
+                if (!Modifier.isPublic(interfaceCls.getModifiers())) {
+                    String npkg = interfaceCls.getPackage().getName();
                     if (pkg == null) {
                         pkg = npkg;
                     } else {
@@ -150,53 +161,72 @@ public abstract class Proxy {
                         }
                     }
                 }
-                ccp.addInterface(ics[i]);
+                //添加接口
+                ccp.addInterface(interfaceCls);
 
-                for (Method method : ics[i].getMethods()) {
+                //添加接口的方法
+                for (Method method : interfaceCls.getMethods()) {
                     String desc = ReflectUtils.getDesc(method);
                     if (worked.contains(desc)) {
                         continue;
                     }
                     worked.add(desc);
 
-                    int ix = methods.size();
+                    //方法返回值
                     Class<?> rt = method.getReturnType();
+                    //方法入参数
                     Class<?>[] pts = method.getParameterTypes();
 
+                    //构建方法的入参
                     StringBuilder code = new StringBuilder("Object[] args = new Object[").append(pts.length).append("];");
                     for (int j = 0; j < pts.length; j++) {
                         code.append(" args[").append(j).append("] = ($w)$").append(j + 1).append(";");
                     }
-                    code.append(" Object ret = handler.invoke(this, methods[").append(ix).append("], args);");
+                    //委托给handler调用
+                    code.append(" Object ret = handler.invoke(this, methods[").append( methods.size()).append("], args);");
+                    //返回参数不是void的处理
                     if (!Void.TYPE.equals(rt)) {
                         code.append(" return ").append(asArgument(rt, "ret")).append(";");
                     }
-
+                    //添加到已实现的方法集合中
                     methods.add(method);
+                    //添加方法实现
                     ccp.addMethod(method.getName(), method.getModifiers(), rt, pts, method.getExceptionTypes(), code.toString());
                 }
             }
 
+            //包名
             if (pkg == null) {
                 pkg = PACKAGE_NAME;
             }
 
-            // create ProxyInstance class.
+            //创建ProxyInstance类
+            //构建类名
             String pcn = pkg + ".proxy" + id;
             ccp.setClassName(pcn);
+            //添加字段，所有实现的方法数组
             ccp.addField("public static java.lang.reflect.Method[] methods;");
+            //添加对应的InvocationHandler
             ccp.addField("private " + InvocationHandler.class.getName() + " handler;");
+            //添加含InvocationHandler的构造函数
             ccp.addConstructor(Modifier.PUBLIC, new Class<?>[]{InvocationHandler.class}, new Class<?>[0], "handler=$1;");
+            //添加默认的构造函数
             ccp.addDefaultConstructor();
             Class<?> clazz = ccp.toClass();
+            //设置获得实现的方法
             clazz.getField("methods").set(null, methods.toArray(new Method[0]));
 
             // create Proxy class.
+            // 创建代理类
             String fcn = Proxy.class.getName() + id;
             ccm = ClassGenerator.newInstance(cl);
+            //类名
             ccm.setClassName(fcn);
+            //默认构造函数
             ccm.addDefaultConstructor();
+            //父类
             ccm.setSuperClass(Proxy.class);
+            //由该代理类获得真正的接口实现类
             ccm.addMethod("public Object newInstance(" + InvocationHandler.class.getName() + " h){ return new " + pcn + "($1); }");
             Class<?> pc = ccm.toClass();
             proxy = (Proxy) pc.newInstance();
@@ -216,7 +246,7 @@ public abstract class Proxy {
                 if (proxy == null) {
                     cache.remove(key);
                 } else {
-                    cache.put(key, new WeakReference<Proxy>(proxy));
+                    cache.put(key, new WeakReference<>(proxy));
                 }
                 cache.notifyAll();
             }
