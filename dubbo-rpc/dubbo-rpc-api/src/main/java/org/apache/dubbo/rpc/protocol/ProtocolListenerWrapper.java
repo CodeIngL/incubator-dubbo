@@ -32,6 +32,7 @@ import java.util.Collections;
 
 /**
  * ListenerProtocol
+ * 包装器，适用于服务or消费两端，不处理注册中心的相关操作
  */
 public class ProtocolListenerWrapper implements Protocol {
 

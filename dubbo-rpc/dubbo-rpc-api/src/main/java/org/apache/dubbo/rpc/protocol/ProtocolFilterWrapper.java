@@ -31,7 +31,8 @@ import org.apache.dubbo.rpc.RpcException;
 import java.util.List;
 
 /**
- * ListenerProtocol
+ * FilterProtocol
+ * 包装器，适用于服务or消费两端，不处理注册中心的相关操作
  */
 public class ProtocolFilterWrapper implements Protocol {
 

@@ -33,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * AbstractProxyProtocol
+ * 代理概念上的Protocol
  */
 public abstract class AbstractProxyProtocol extends AbstractProtocol {
 
@@ -61,23 +62,33 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         this.proxyFactory = proxyFactory;
     }
 
+    /**
+     * proxy下都是支持的generic的
+     * @param invoker Service invoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> Exporter<T> export(final Invoker<T> invoker) throws RpcException {
-        final String uri = serviceKey(invoker.getUrl());
-        Exporter<T> exporter = (Exporter<T>) exporterMap.get(uri);
+        URL url = invoker.getUrl();
+        final String key = serviceKey(url);
+        Exporter<T> exporter = (Exporter<T>) exporterMap.get(key);
         if (exporter != null) {
             // When modifying the configuration through override, you need to re-expose the newly modified service.
-            if (Objects.equals(exporter.getInvoker().getUrl(), invoker.getUrl())) {
+            // 如果通过覆盖修改配置，则需要重新公开新修改的服务。
+            if (Objects.equals(exporter.getInvoker().getUrl(), url)) {
                 return exporter;
             }
         }
-        final Runnable runnable = doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), invoker.getUrl());
+        //允许子类暴露一个认定export
+        final Runnable runnable = doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), url);
         exporter = new AbstractExporter<T>(invoker) {
             @Override
             public void unexport() {
                 super.unexport();
-                exporterMap.remove(uri);
+                exporterMap.remove(key);
                 if (runnable != null) {
                     try {
                         runnable.run();
@@ -87,7 +98,7 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
                 }
             }
         };
-        exporterMap.put(uri, exporter);
+        exporterMap.put(key, exporter);
         return exporter;
     }
 
@@ -130,7 +141,7 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
     }
 
     protected String getAddr(URL url) {
-        String bindIp = url.getParameter(Constants.BIND_IP_KEY, url.getHost());
+        String bindIp = url.getParameter(Constants.BIND_IP_KEY, url.getHost()); //绑定地址
         if (url.getParameter(Constants.ANYHOST_KEY, false)) {
             bindIp = Constants.ANYHOST_VALUE;
         }
@@ -141,6 +152,15 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         return RpcException.UNKNOWN_EXCEPTION;
     }
 
+    /**
+     * 运行子类包装使用不同的方式进行暴露，impl 实现了generic接口
+     * @param impl 实现
+     * @param type
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     protected abstract <T> Runnable doExport(T impl, Class<T> type, URL url) throws RpcException;
 
     protected abstract <T> T doRefer(Class<T> type, URL url) throws RpcException;
