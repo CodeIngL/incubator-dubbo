@@ -49,11 +49,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
 /**
- * Load dubbo extensions
+ * Dubbo使用的extension获取<p>
  * <ul>
- * <li>auto inject dependency extension </li>
- * <li>auto wrap extension in wrapper </li>
- * <li>default extension is an adaptive instance</li>
+ * <li>自动注入extension的依赖。</li>
+ * <li>自动包装extension的Wrap类。</li>
+ * <li>默认获得的的extension是一个Adaptive Instance。</li>
  * </ul>
  *
  * @see <a href="http://java.sun.com/j2se/1.5.0/docs/guide/jar/jar.html#Service%20Provider">Service Provider in Java 5</a>
@@ -62,6 +62,8 @@ import java.util.regex.Pattern;
  * @see org.apache.dubbo.common.extension.Activate
  */
 public class ExtensionLoader<T> {
+
+    // ============类属性==================
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLoader.class);
 
@@ -179,11 +181,20 @@ public class ExtensionLoader<T> {
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
+    //-------------------------
+    //对传递进来的interface的type进行加载Extension，
+    //这个实现可能由编码实现的存在java文件中
+    //亦有可能是在运行时生成的，典型是为生成type的Adaptive扩展
+
     /**
      * 根据type的接口，寻找type的实现，并返回该type下对应的ExtensionLoader。
      * <ul>
      * <li>type非空，并必须为Interface，同时带有SPI注解</li>
      * </ul>
+     * <p>
+     * <b>ex</b>: type equal to <code>com.A.Class</code>, the type's impl is <code>com.AImpl.Class</code>, the result will return <code>ExtensionLoader<A></code>.<br/>
+     * <b>tip</b>: this will cache in EXTENSION_LOADERS with key:<code>A.Class</code>  , value:<code>ExtensionLoader<A></code>.<br/>
+     * </p>
      *
      * @param type 类型
      * @param <T>  type对应的ExtensionLoader。
@@ -224,14 +235,38 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 获得类加载器
+     * 1. 当前线程的类加载器
+     * 2. 加载ExtensionLoader的类加载器
+     * 3. getSystemClassLoader()
+     * @return 类加载
+     */
     private static ClassLoader findClassLoader() {
         return ClassHelper.getClassLoader(ExtensionLoader.class);
     }
 
+    /**
+     * 获得Extension对应的扩展名
+     * tip，第一次加载Extension产生的扩展名
+     * @param extensionInstance 具体的Extension实例
+     * @return 名称
+     * @see #getExtensionName(Class)
+     * @see #cachedNames
+     */
     public String getExtensionName(T extensionInstance) {
         return getExtensionName(extensionInstance.getClass());
     }
 
+    /**
+     * 获得Extension类对应的扩展名
+     * tip，第一次加载Extension产生的扩展名
+     * 没有触发loader的情况下会先触发加载
+     * @param extensionClass 具体的Extension类
+     * @return 名称
+     * @see #cachedNames
+     * @see #getExtensionClasses()
+     */
     public String getExtensionName(Class<?> extensionClass) {
         getExtensionClasses();// load class
         return cachedNames.get(extensionClass);

@@ -85,11 +85,13 @@ public class ClassHelper {
         return caller.getClassLoader();
     }
 
+
     /**
-     * get class loader
-     *
-     * @param clazz
-     * @return class loader
+     * 获得类加载器
+     * 1. 当前线程的类加载器
+     * 2. 加载class的类加载器
+     * 3. getSystemClassLoader()
+     * @return 类加载
      */
     public static ClassLoader getClassLoader(Class<?> clazz) {
         ClassLoader cl = null;
