@@ -113,12 +113,13 @@ public class RpcUtils {
 
     /**
      * Idempotent operation: invocation id will be added in async operation by default
-     *
+     * 幂等操作：默认情况下，将在异步操作中添加调用ID
      * @param url
      * @param inv
      */
     public static void attachInvocationIdIfAsync(URL url, Invocation inv) {
         if (isAttachInvocationId(url, inv) && getInvocationId(inv) == null && inv instanceof RpcInvocation) {
+            //异步调用增加Id
             ((RpcInvocation) inv).setAttachment(Constants.ID_KEY, String.valueOf(INVOKE_ID.getAndIncrement()));
         }
     }
@@ -127,6 +128,7 @@ public class RpcUtils {
         String value = url.getMethodParameter(invocation.getMethodName(), Constants.AUTO_ATTACH_INVOCATIONID_KEY);
         if (value == null) {
             // add invocationid in async operation by default
+            // 默认情况下在异步操作中添加invocationid
             return isAsync(url, invocation);
         } else if (Boolean.TRUE.toString().equalsIgnoreCase(value)) {
             return true;
@@ -135,6 +137,11 @@ public class RpcUtils {
         }
     }
 
+    /**
+     * 获得invocation对应方法名
+     * @param invocation
+     * @return
+     */
     public static String getMethodName(Invocation invocation) {
         if (Constants.$INVOKE.equals(invocation.getMethodName())
                 && invocation.getArguments() != null

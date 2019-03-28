@@ -40,6 +40,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * mocker可以解析文本作为一段代码段返回，亦可以有着对应的实现，不过这个实现只是简单的被构造了。没有任何的属性注入
+ *
+ * TODO usr objectFactory来完成这个的注入
+ * @param <T>
+ */
 final public class MockInvoker<T> implements Invoker<T> {
     private final static ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
     private final static Map<String, Invoker<?>> mocks = new ConcurrentHashMap<String, Invoker<?>>();
@@ -85,28 +91,35 @@ final public class MockInvoker<T> implements Invoker<T> {
         return value;
     }
 
+    /**
+     * mock调用的逻辑
+     * @param inv
+     * @return
+     * @throws RpcException
+     */
     @Override
-    public Result invoke(Invocation invocation) throws RpcException {
-        String mock = getUrl().getParameter(invocation.getMethodName() + "." + Constants.MOCK_KEY);
-        if (invocation instanceof RpcInvocation) {
-            ((RpcInvocation) invocation).setInvoker(this);
+    public Result invoke(Invocation inv) throws RpcException {
+        String mock = getUrl().getParameter(inv.getMethodName() + "." + Constants.MOCK_KEY); //是否存在方法级的mock，mock文本端
+        if (inv instanceof RpcInvocation) {
+            ((RpcInvocation) inv).setInvoker(this);
         }
         if (StringUtils.isBlank(mock)) {
-            mock = getUrl().getParameter(Constants.MOCK_KEY);
+            mock = getUrl().getParameter(Constants.MOCK_KEY); //接口级的mock
         }
 
         if (StringUtils.isBlank(mock)) {
-            throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url));
+            throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url)); //没有mock 配置错误
         }
+        //标准化mock的文本，可能是特殊的次，可能是特殊的文本
         mock = normalizeMock(URL.decode(mock));
         if (mock.startsWith(Constants.RETURN_PREFIX)) {
             mock = mock.substring(Constants.RETURN_PREFIX.length()).trim();
             try {
-                Type[] returnTypes = RpcUtils.getReturnTypes(invocation);
+                Type[] returnTypes = RpcUtils.getReturnTypes(inv);
                 Object value = parseMockValue(mock, returnTypes);
                 return new RpcResult(value);
             } catch (Exception ew) {
-                throw new RpcException("mock return invoke error. method :" + invocation.getMethodName()
+                throw new RpcException("mock return invoke error. method :" + inv.getMethodName()
                         + ", mock:" + mock + ", url: " + url, ew);
             }
         } else if (mock.startsWith(Constants.THROW_PREFIX)) {
@@ -117,10 +130,10 @@ final public class MockInvoker<T> implements Invoker<T> {
                 Throwable t = getThrowable(mock);
                 throw new RpcException(RpcException.BIZ_EXCEPTION, t);
             }
-        } else { //impl mock
+        } else { //impl mock 有mocker的实现
             try {
                 Invoker<T> invoker = getInvoker(mock);
-                return invoker.invoke(invocation);
+                return invoker.invoke(inv);
             } catch (Throwable t) {
                 throw new RpcException("Failed to create mock implementation class " + mock, t);
             }
@@ -148,6 +161,11 @@ final public class MockInvoker<T> implements Invoker<T> {
         }
     }
 
+    /**
+     *  mock有对应的实现
+     * @param mockService
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private Invoker<T> getInvoker(String mockService) {
         Invoker<T> invoker = (Invoker<T>) mocks.get(mockService);
