@@ -18,6 +18,7 @@ package org.apache.dubbo.rpc.protocol.hessian;
 
 import org.apache.dubbo.common.Constants;
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.remoting.http.HttpBinder;
 import org.apache.dubbo.remoting.http.HttpHandler;
 import org.apache.dubbo.remoting.http.HttpServer;
@@ -44,8 +45,14 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.dubbo.common.Constants.DEFAULT_EXCHANGER;
+import static org.apache.dubbo.common.Constants.DEFAULT_HTTP_CLIENT;
+
 /**
  * http rpc support.
+ *
+ * http rpc 支持
+ * hessian
  */
 public class HessianProtocol extends AbstractProxyProtocol {
 
@@ -68,20 +75,29 @@ public class HessianProtocol extends AbstractProxyProtocol {
         return 80;
     }
 
+    /**
+     * 暴露
+     * @param impl 实现的代理实例
+     * @param type 类型
+     * @param url 地址
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     protected <T> Runnable doExport(T impl, Class<T> type, URL url) throws RpcException {
-        String addr = getAddr(url);
-        HttpServer server = serverMap.get(addr);
+        String addr = getAddr(url); //构建地址
+        HttpServer server = serverMap.get(addr); //获得服务
         if (server == null) {
-            server = httpBinder.bind(url, new HessianHandler());
+            server = httpBinder.bind(url, new HessianHandler()); //暴露一个httpServer
             serverMap.put(addr, server);
         }
-        final String path = url.getAbsolutePath();
-        final HessianSkeleton skeleton = new HessianSkeleton(impl, type);
+        final String path = url.getAbsolutePath(); //全路径
+        final HessianSkeleton skeleton = new HessianSkeleton(impl, type); //构建一个
         skeletonMap.put(path, skeleton);
 
-        final String genericPath = path + "/" + Constants.GENERIC_KEY;
-        skeletonMap.put(genericPath, new HessianSkeleton(impl, GenericService.class));
+        final String genericPath = path + "/" + Constants.GENERIC_KEY; //泛化调用路径
+        skeletonMap.put(genericPath, new HessianSkeleton(impl, GenericService.class)); //构建一个
 
         return new Runnable() {
             @Override
@@ -92,6 +108,14 @@ public class HessianProtocol extends AbstractProxyProtocol {
         };
     }
 
+    /**
+     * 将服务引用转换为hessian实现
+     * @param serviceType
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T doRefer(Class<T> serviceType, URL url) throws RpcException {
@@ -102,17 +126,22 @@ public class HessianProtocol extends AbstractProxyProtocol {
             url = url.setPath(url.getPath() + "/" + Constants.GENERIC_KEY);
         }
 
+        //构建hessian代理
         HessianProxyFactory hessianProxyFactory = new HessianProxyFactory();
+        //是否是hessian2序列化的请求
         boolean isHessian2Request = url.getParameter(Constants.HESSIAN2_REQUEST_KEY, Constants.DEFAULT_HESSIAN2_REQUEST);
         hessianProxyFactory.setHessian2Request(isHessian2Request);
+        //是否是覆盖
         boolean isOverloadEnabled = url.getParameter(Constants.HESSIAN_OVERLOAD_METHOD_KEY, Constants.DEFAULT_HESSIAN_OVERLOAD_METHOD);
         hessianProxyFactory.setOverloadEnabled(isOverloadEnabled);
-        String client = url.getParameter(Constants.CLIENT_KEY, Constants.DEFAULT_HTTP_CLIENT);
-        if ("httpclient".equals(client)) {
+        //默认的
+        String client = url.getParameter(Constants.CLIENT_KEY, DEFAULT_HTTP_CLIENT);
+        if ("httpclient".equals(client)) { //jdk
             HessianConnectionFactory factory = new HttpClientConnectionFactory();
             factory.setHessianProxyFactory(hessianProxyFactory);
             hessianProxyFactory.setConnectionFactory(factory);
-        } else if (client != null && client.length() > 0 && !Constants.DEFAULT_HTTP_CLIENT.equals(client)) {
+        } else if (StringUtils.isNotEmpty(client) && !DEFAULT_HTTP_CLIENT.equals(client)) {
+            //之支持httpclient或者jdk
             throw new IllegalStateException("Unsupported http protocol client=\"" + client + "\"!");
         } else {
             HessianConnectionFactory factory = new DubboHessianURLConnectionFactory();
@@ -122,6 +151,7 @@ public class HessianProtocol extends AbstractProxyProtocol {
         int timeout = url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
         hessianProxyFactory.setConnectTimeout(timeout);
         hessianProxyFactory.setReadTimeout(timeout);
+        //暴露代理
         return (T) hessianProxyFactory.create(serviceType, url.setProtocol("http").toJavaURL(), Thread.currentThread().getContextClassLoader());
     }
 
@@ -144,7 +174,7 @@ public class HessianProtocol extends AbstractProxyProtocol {
     @Override
     public void destroy() {
         super.destroy();
-        for (String key : new ArrayList<String>(serverMap.keySet())) {
+        for (String key : new ArrayList<>(serverMap.keySet())) {
             HttpServer server = serverMap.remove(key);
             if (server != null) {
                 try {
@@ -164,9 +194,9 @@ public class HessianProtocol extends AbstractProxyProtocol {
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response)
                 throws IOException, ServletException {
-            String uri = request.getRequestURI();
-            HessianSkeleton skeleton = skeletonMap.get(uri);
-            if (!request.getMethod().equalsIgnoreCase("POST")) {
+            String uri = request.getRequestURI(); //请求uri
+            HessianSkeleton skeleton = skeletonMap.get(uri); //对应的hessionSkeleton
+            if (!request.getMethod().equalsIgnoreCase("POST")) { //只允许post
                 response.setStatus(500);
             } else {
                 RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
@@ -174,14 +204,14 @@ public class HessianProtocol extends AbstractProxyProtocol {
                 Enumeration<String> enumeration = request.getHeaderNames();
                 while (enumeration.hasMoreElements()) {
                     String key = enumeration.nextElement();
-                    if (key.startsWith(Constants.DEFAULT_EXCHANGER)) {
-                        RpcContext.getContext().setAttachment(key.substring(Constants.DEFAULT_EXCHANGER.length()),
+                    if (key.startsWith(DEFAULT_EXCHANGER)) {
+                        RpcContext.getContext().setAttachment(key.substring(DEFAULT_EXCHANGER.length()),
                                 request.getHeader(key));
                     }
                 }
 
                 try {
-                    skeleton.invoke(request.getInputStream(), response.getOutputStream());
+                    skeleton.invoke(request.getInputStream(), response.getOutputStream()); //skeleton使用
                 } catch (Throwable e) {
                     throw new ServletException(e);
                 }
