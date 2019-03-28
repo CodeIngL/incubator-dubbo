@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.apache.dubbo.common.utils.CollectionUtils.isNotEmptyMap;
+
 /**
  * AbstractClusterInvoker
  */
@@ -141,18 +143,28 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return invoker;
     }
 
+    /**
+     * 从列表中选择合适的Invoker
+     *
+     * @param loadbalance 负载均衡
+     * @param invocation  调用对象
+     * @param invokers    调用者
+     * @param selected    选定者
+     * @return 合适的调用者
+     * @throws RpcException rpc异常
+     */
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation,
                                 List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
-
-        if (CollectionUtils.isEmpty(invokers)) {
+        if (CollectionUtils.isEmpty(invokers)) { //参数校验
             return null;
         }
-        if (invokers.size() == 1) {
+        if (invokers.size() == 1) {//只有一个直接返回
             return invokers.get(0);
         }
-        Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
+        Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);//使用负载均衡进行选择
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
+        //  //如果 selected中包含（优先判断） 或者 不可用&&availablecheck=true 则reselect.
         if ((selected != null && selected.contains(invoker))
                 || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
             try {
@@ -228,15 +240,20 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
+        //检查接口是否已经关闭
         checkWhetherDestroyed();
 
         // binding attachments into invocation.
+        // 绑定上下文中的contextAttachments到调用的抽象RpcInvocation中
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
-        if (contextAttachments != null && contextAttachments.size() != 0) {
+        if (isNotEmptyMap(contextAttachments)) {
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
         }
 
+        //显示invocation对应的invoker列表，由目录服务支持
         List<Invoker<T>> invokers = list(invocation);
+
+        //选择对应loadBalance
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
         return doInvoke(invocation, invokers, loadbalance);
@@ -270,6 +287,12 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers,
                                        LoadBalance loadbalance) throws RpcException;
 
+    /**
+     * 显示invocation对应的invoker列表，由目录服务支持
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     protected List<Invoker<T>> list(Invocation invocation) throws RpcException {
         return directory.list(invocation);
     }
@@ -287,9 +310,11 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      */
     protected LoadBalance initLoadBalance(List<Invoker<T>> invokers, Invocation invocation) {
         if (CollectionUtils.isNotEmpty(invokers)) {
+            //方法级别上的loadBalance
             return ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
                     .getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         } else {
+            //默认的loadBalance
             return ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(Constants.DEFAULT_LOADBALANCE);
         }
     }
