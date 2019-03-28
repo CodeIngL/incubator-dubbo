@@ -40,11 +40,8 @@ public abstract class BaseRestServer implements RestServer {
 
     @Override
     public void deploy(Class resourceDef, Object resourceInstance, String contextPath) {
-        if (StringUtils.isEmpty(contextPath)) {
-            getDeployment().getRegistry().addResourceFactory(new DubboResourceFactory(resourceInstance, resourceDef));
-        } else {
-            getDeployment().getRegistry().addResourceFactory(new DubboResourceFactory(resourceInstance, resourceDef), contextPath);
-        }
+            getDeployment().getRegistry().addResourceFactory(new DubboResourceFactory(resourceInstance, resourceDef),
+                    StringUtils.isEmpty(contextPath) ? null:contextPath);
     }
 
     @Override
