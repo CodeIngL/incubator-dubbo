@@ -27,13 +27,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.apache.dubbo.common.Constants.CATEGORY_KEY;
-import static org.apache.dubbo.common.Constants.CONFIGURATORS_CATEGORY;
-import static org.apache.dubbo.common.Constants.DEFAULT_CATEGORY;
-import static org.apache.dubbo.common.Constants.OVERRIDE_PROTOCOL;
-import static org.apache.dubbo.common.Constants.PROVIDERS_CATEGORY;
-import static org.apache.dubbo.common.Constants.ROUTERS_CATEGORY;
-import static org.apache.dubbo.common.Constants.ROUTE_PROTOCOL;
+import static org.apache.dubbo.common.Constants.*;
 
 public class UrlUtils {
 
@@ -50,7 +44,7 @@ public class UrlUtils {
         if (address.contains("://") || address.contains(URL_PARAM_STARTING_SYMBOL)) {
             url = address;
         } else {
-            String[] addresses = Constants.COMMA_SPLIT_PATTERN.split(address);
+            String[] addresses = COMMA_SPLIT_PATTERN.split(address);
             url = addresses[0];
             if (addresses.length > 1) {
                 StringBuilder backup = new StringBuilder();
@@ -60,25 +54,25 @@ public class UrlUtils {
                     }
                     backup.append(addresses[i]);
                 }
-                url += URL_PARAM_STARTING_SYMBOL + Constants.BACKUP_KEY + "=" + backup.toString();
+                url += URL_PARAM_STARTING_SYMBOL + BACKUP_KEY + "=" + backup.toString();
             }
         }
-        String defaultProtocol = defaults == null ? null : defaults.get(Constants.PROTOCOL_KEY);
+        String defaultProtocol = defaults == null ? null : defaults.get(PROTOCOL_KEY);
         if (defaultProtocol == null || defaultProtocol.length() == 0) {
             defaultProtocol = Constants.DUBBO_PROTOCOL;
         }
-        String defaultUsername = defaults == null ? null : defaults.get(Constants.USERNAME_KEY);
-        String defaultPassword = defaults == null ? null : defaults.get(Constants.PASSWORD_KEY);
-        int defaultPort = StringUtils.parseInteger(defaults == null ? null : defaults.get(Constants.PORT_KEY));
-        String defaultPath = defaults == null ? null : defaults.get(Constants.PATH_KEY);
+        String defaultUsername = defaults == null ? null : defaults.get(USERNAME_KEY);
+        String defaultPassword = defaults == null ? null : defaults.get(PASSWORD_KEY);
+        int defaultPort = StringUtils.parseInteger(defaults == null ? null : defaults.get(PORT_KEY));
+        String defaultPath = defaults == null ? null : defaults.get(PATH_KEY);
         Map<String, String> defaultParameters = defaults == null ? null : new HashMap<String, String>(defaults);
         if (defaultParameters != null) {
-            defaultParameters.remove(Constants.PROTOCOL_KEY);
-            defaultParameters.remove(Constants.USERNAME_KEY);
-            defaultParameters.remove(Constants.PASSWORD_KEY);
-            defaultParameters.remove(Constants.HOST_KEY);
-            defaultParameters.remove(Constants.PORT_KEY);
-            defaultParameters.remove(Constants.PATH_KEY);
+            defaultParameters.remove(PROTOCOL_KEY);
+            defaultParameters.remove(USERNAME_KEY);
+            defaultParameters.remove(PASSWORD_KEY);
+            defaultParameters.remove(HOST_KEY);
+            defaultParameters.remove(PORT_KEY);
+            defaultParameters.remove(PATH_KEY);
         }
         URL u = URL.valueOf(url);
         boolean changed = false;
@@ -352,8 +346,8 @@ public class UrlUtils {
         }
         return URL.valueOf(Constants.EMPTY_PROTOCOL + "://0.0.0.0/" + service + URL_PARAM_STARTING_SYMBOL
                 + CATEGORY_KEY + "=" + category
-                + (group == null ? "" : "&" + Constants.GROUP_KEY + "=" + group)
-                + (version == null ? "" : "&" + Constants.VERSION_KEY + "=" + version));
+                + (group == null ? "" : "&" + GROUP_KEY + "=" + group)
+                + (version == null ? "" : "&" + VERSION_KEY + "=" + version));
     }
 
     public static boolean isMatchCategory(String category, String categories) {
@@ -387,12 +381,12 @@ public class UrlUtils {
             return false;
         }
 
-        String consumerGroup = consumerUrl.getParameter(Constants.GROUP_KEY);
-        String consumerVersion = consumerUrl.getParameter(Constants.VERSION_KEY);
+        String consumerGroup = consumerUrl.getParameter(GROUP_KEY);
+        String consumerVersion = consumerUrl.getParameter(VERSION_KEY);
         String consumerClassifier = consumerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
 
-        String providerGroup = providerUrl.getParameter(Constants.GROUP_KEY);
-        String providerVersion = providerUrl.getParameter(Constants.VERSION_KEY);
+        String providerGroup = providerUrl.getParameter(GROUP_KEY);
+        String providerVersion = providerUrl.getParameter(VERSION_KEY);
         String providerClassifier = providerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
         return (Constants.ANY_VALUE.equals(consumerGroup) || StringUtils.isEquals(consumerGroup, providerGroup) || StringUtils.isContains(consumerGroup, providerGroup))
                 && (Constants.ANY_VALUE.equals(consumerVersion) || StringUtils.isEquals(consumerVersion, providerVersion))
@@ -438,13 +432,19 @@ public class UrlUtils {
         }
     }
 
+    /**
+     *  两者是否可以匹配
+     * @param pattern
+     * @param value
+     * @return
+     */
     public static boolean isServiceKeyMatch(URL pattern, URL value) {
-        return pattern.getParameter(Constants.INTERFACE_KEY).equals(
-                value.getParameter(Constants.INTERFACE_KEY))
-                && isItemMatch(pattern.getParameter(Constants.GROUP_KEY),
-                value.getParameter(Constants.GROUP_KEY))
-                && isItemMatch(pattern.getParameter(Constants.VERSION_KEY),
-                value.getParameter(Constants.VERSION_KEY));
+        return pattern.getParameter(INTERFACE_KEY).equals(
+                value.getParameter(INTERFACE_KEY))
+                && isItemMatch(pattern.getParameter(GROUP_KEY),
+                value.getParameter(GROUP_KEY))
+                && isItemMatch(pattern.getParameter(VERSION_KEY),
+                value.getParameter(VERSION_KEY));
     }
 
     public static List<URL> classifyUrls(List<URL> urls, Predicate<URL> predicate) {
@@ -473,7 +473,7 @@ public class UrlUtils {
 
     public static int getIdleTimeout(URL url) {
         int heartBeat = getHeartbeat(url);
-        int idleTimeout = url.getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartBeat * 3);
+        int idleTimeout = url.getParameter(HEARTBEAT_TIMEOUT_KEY, heartBeat * 3);
         if (idleTimeout < heartBeat * 2) {
             throw new IllegalStateException("idleTimeout < heartbeatInterval * 2");
         }
