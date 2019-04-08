@@ -37,11 +37,22 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
         return getProxy(invoker, false);
     }
 
+    /**
+     *
+     * 使用相关的技术构建代理时，进行一些接口的支持。
+     * @param invoker
+     * @param generic
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Class<?>[] interfaces = null;
+        //每一个接口都需要实现，本身的接口，echoService和额外指定的接口
         String config = invoker.getUrl().getParameter(Constants.INTERFACES);
         if (isNotEmpty(config)) {
+            //额外需要代理的接口
             String[] types = Constants.COMMA_SPLIT_PATTERN.split(config);
             interfaces = new Class<?>[types.length + 2];
             interfaces[0] = invoker.getInterface();

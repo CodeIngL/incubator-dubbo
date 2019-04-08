@@ -300,9 +300,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
         map.put(Constants.INTERFACE_KEY, interfaceName);
+        //应用级
         appendParameters(map, application);
+        //模块级
         appendParameters(map, module);
+        //consumer
         appendParameters(map, consumer, Constants.DEFAULT_KEY);
+        //特定的接口自己
         appendParameters(map, this);
         Map<String, Object> attributes = null;
         if (CollectionUtils.isNotEmpty(methods)) {

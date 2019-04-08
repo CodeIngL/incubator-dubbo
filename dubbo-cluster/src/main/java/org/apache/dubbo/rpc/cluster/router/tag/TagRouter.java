@@ -83,6 +83,16 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
         return url;
     }
 
+    /**
+     *
+     * 标记路由
+     * @param invokers   invoker list
+     * @param url        refer url
+     * @param invocation invocation
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
         if (CollectionUtils.isEmpty(invokers)) {
@@ -90,6 +100,7 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
         }
 
         // since the rule can be changed by config center, we should copy one to use.
+        // 由于配置中心可以更改规则，我们应该复制一个使用。
         final TagRouterRule tagRouterRuleCopy = tagRouterRule;
         if (tagRouterRuleCopy == null || !tagRouterRuleCopy.isValid() || !tagRouterRuleCopy.isEnabled()) {
             return filterUsingStaticTag(invokers, url, invocation);
@@ -100,7 +111,9 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
                 invocation.getAttachment(TAG_KEY);
 
         // if we are requesting for a Provider with a specific tag
+        // 如果我们要求具有特定标签的提供商
         if (StringUtils.isNotEmpty(tag)) {
+            //地址
             List<String> addresses = tagRouterRuleCopy.getTagnameToAddresses().get(tag);
             // filter by dynamic tag group first
             if (CollectionUtils.isNotEmpty(addresses)) {
@@ -153,6 +166,11 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
      * <p>
      * TODO, to guarantee consistent behavior of interoperability between 2.6- and 2.7+, this method should has the same logic with the TagRouter in 2.6.x.
      *
+     * <p>
+     *     如果没有设置动态标记规则，请在URL中使用静态标记。
+     * 典型情况是使用版本2.7.x或更低版本的使用版本2.7.x的使用者，消费者应始终尊重提供者URL中的标记，无论是否已设置动态标记规则。
+     * TODO，为了保证2.6-和2.7+之间的互操作性的一致行为，这个方法应该与2.6.x中的TagRouter具有相同的逻辑。
+     * </p>
      * @param invokers
      * @param url
      * @param invocation
@@ -162,12 +180,14 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
     private <T> List<Invoker<T>> filterUsingStaticTag(List<Invoker<T>> invokers, URL url, Invocation invocation) {
         List<Invoker<T>> result = invokers;
         // Dynamic param
+        //调用者的动态参数，或者使用url中匹配的
         String tag = StringUtils.isEmpty(invocation.getAttachment(TAG_KEY)) ? url.getParameter(TAG_KEY) :
                 invocation.getAttachment(TAG_KEY);
         // Tag request
+        // Tag请求
         if (!StringUtils.isEmpty(tag)) {
             result = filterInvoker(invokers, invoker -> tag.equals(invoker.getUrl().getParameter(Constants.TAG_KEY)));
-            if (CollectionUtils.isEmpty(result) && !isForceUseTag(invocation)) {
+            if (CollectionUtils.isEmpty(result) && !isForceUseTag(invocation)) { //强制使用tag
                 result = filterInvoker(invokers, invoker -> StringUtils.isEmpty(invoker.getUrl().getParameter(Constants.TAG_KEY)));
             }
         } else {

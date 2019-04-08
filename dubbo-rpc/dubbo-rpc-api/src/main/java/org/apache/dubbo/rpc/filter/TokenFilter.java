@@ -32,6 +32,11 @@ import java.util.Map;
  * Perform check whether given provider token is matching with remote token or not. If it does not match
  * it will not allow to invoke remote method.
  *
+ * <p>
+ * 执行检查给定的提供者令牌是否与远程令牌匹配。 如果不匹配则不允许调用远程方法。
+ * <p>
+ * 作用域提供端
+ *
  * @see Filter
  */
 @Activate(group = Constants.PROVIDER, value = Constants.TOKEN_KEY)
@@ -40,14 +45,16 @@ public class TokenFilter implements Filter {
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv)
             throws RpcException {
-        String token = invoker.getUrl().getParameter(Constants.TOKEN_KEY);
+        String token = invoker.getUrl().getParameter(Constants.TOKEN_KEY);//获得服务端中url中包含的token
         if (ConfigUtils.isNotEmpty(token)) {
-            Class<?> serviceType = invoker.getInterface();
-            Map<String, String> attachments = inv.getAttachments();
-            String remoteToken = attachments == null ? null : attachments.get(Constants.TOKEN_KEY);
-            if (!token.equals(remoteToken)) {
-                throw new RpcException("Invalid token! Forbid invoke remote service " + serviceType + " method " + inv.getMethodName() + "() from consumer " + RpcContext.getContext().getRemoteHost() + " to provider " + RpcContext.getContext().getLocalHost());
-            }
+            return invoker.invoke(inv);
+        }
+        Class<?> serviceType = invoker.getInterface();
+        Map<String, String> attachments = inv.getAttachments();
+        //远程的token
+        String remoteToken = attachments == null ? null : attachments.get(Constants.TOKEN_KEY);
+        if (!token.equals(remoteToken)) {
+            throw new RpcException("Invalid token! Forbid invoke remote service " + serviceType + " method " + inv.getMethodName() + "() from consumer " + RpcContext.getContext().getRemoteHost() + " to provider " + RpcContext.getContext().getLocalHost());
         }
         return invoker.invoke(inv);
     }

@@ -33,6 +33,7 @@ public class EchoFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
+        //调用的方法名是$echo
         if (inv.getMethodName().equals(Constants.$ECHO) && inv.getArguments() != null && inv.getArguments().length == 1) {
             return new RpcResult(inv.getArguments()[0]);
         }

@@ -33,19 +33,32 @@ import java.util.stream.Collectors;
 public class RouterChain<T> {
 
     // full list of addresses from registry, classified by method name.
+    // 注册表中的完整地址列表，按方法名称分类。
     private List<Invoker<T>> invokers = Collections.emptyList();
 
     // containing all routers, reconstruct every time 'route://' urls change.
+    // 包含所有路由器，每次'route：//'url更改时重建。
     private volatile List<Router> routers = Collections.emptyList();
 
     // Fixed router instances: ConfigConditionRouter, TagRouter, e.g., the rule for each instance may change but the
     // instance will never delete or recreate.
+    // 固定路由器实例：ConfigConditionRouter，TagRouter，例如，每个实例的规则可能会更改但实例永远不会删除或重新创建
     private List<Router> builtinRouters = Collections.emptyList();
 
+    /**
+     * 路由链
+     * @param url
+     * @param <T>
+     * @return
+     */
     public static <T> RouterChain<T> buildChain(URL url) {
         return new RouterChain<>(url);
     }
 
+    /**
+     * 路由链,构造时使用一个从Extension中构造的作为路由链的一个固定的路由
+     * @param url
+     */
     private RouterChain(URL url) {
         List<RouterFactory> extensionFactories = ExtensionLoader.getExtensionLoader(RouterFactory.class)
                 .getActivateExtension(url, (String[]) null);
@@ -59,6 +72,7 @@ public class RouterChain<T> {
 
     /**
      * the resident routers must being initialized before address notification.
+     * //构建固定路由器，在动态的调整之前，进行我们的构建
      * FIXME: this method should not be public
      */
     public void initWithRouters(List<Router> builtinRouters) {

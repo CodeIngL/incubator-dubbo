@@ -40,6 +40,9 @@ import java.util.stream.Collectors;
 
 /**
  * Abstract router which listens to dynamic configuration
+ * <p>
+ *     支持动态配置的抽象路由器
+ * </p>
  */
 public abstract class ListenableRouter extends AbstractRouter implements ConfigurationListener {
     public static final String NAME = "LISTENABLE_ROUTER";

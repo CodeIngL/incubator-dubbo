@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 
 /**
  * ScriptRouter
+ * 基于脚本的路由
  */
 public class ScriptRouter extends AbstractRouter {
     public static final String NAME = "SCRIPT_ROUTER";

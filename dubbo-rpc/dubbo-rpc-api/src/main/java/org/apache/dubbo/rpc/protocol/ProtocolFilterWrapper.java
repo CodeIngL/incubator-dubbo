@@ -45,53 +45,63 @@ public class ProtocolFilterWrapper implements Protocol {
         this.protocol = protocol;
     }
 
+    /**
+     * 用于在特定协议下返回时构建相应的Filter对协议对应的worker进行包装
+     *
+     * @param invoker
+     * @param key
+     * @param group
+     * @param <T>
+     * @return
+     */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
-        if (!filters.isEmpty()) {
-            for (int i = filters.size() - 1; i >= 0; i--) {
-                final Filter filter = filters.get(i);
-                final Invoker<T> next = last;
-                last = new Invoker<T>() {
+        if (filters.isEmpty()) {
+            return last;
+        }
+        for (int i = filters.size() - 1; i >= 0; i--) {
+            final Filter filter = filters.get(i);
+            final Invoker<T> next = last;
+            last = new Invoker<T>() {
 
-                    @Override
-                    public Class<T> getInterface() {
-                        return invoker.getInterface();
-                    }
+                @Override
+                public Class<T> getInterface() {
+                    return invoker.getInterface();
+                }
 
-                    @Override
-                    public URL getUrl() {
-                        return invoker.getUrl();
-                    }
+                @Override
+                public URL getUrl() {
+                    return invoker.getUrl();
+                }
 
-                    @Override
-                    public boolean isAvailable() {
-                        return invoker.isAvailable();
-                    }
+                @Override
+                public boolean isAvailable() {
+                    return invoker.isAvailable();
+                }
 
-                    @Override
-                    public Result invoke(Invocation invocation) throws RpcException {
-                        Result result = filter.invoke(next, invocation);
-                        if (result instanceof AsyncRpcResult) {
-                            AsyncRpcResult asyncResult = (AsyncRpcResult) result;
-                            asyncResult.thenApplyWithContext(r -> filter.onResponse(r, invoker, invocation));
-                            return asyncResult;
-                        } else {
-                            return filter.onResponse(result, invoker, invocation);
-                        }
+                @Override
+                public Result invoke(Invocation invocation) throws RpcException {
+                    Result result = filter.invoke(next, invocation);
+                    if (result instanceof AsyncRpcResult) { //异步的支持，再异步返回之后，filter还是能进行处理相关最终异步的返回结果
+                        AsyncRpcResult asyncResult = (AsyncRpcResult) result;
+                        asyncResult.thenApplyWithContext(r -> filter.onResponse(r, invoker, invocation));
+                        return asyncResult;
+                    } else {
+                        return filter.onResponse(result, invoker, invocation);
                     }
+                }
 
-                    @Override
-                    public void destroy() {
-                        invoker.destroy();
-                    }
+                @Override
+                public void destroy() {
+                    invoker.destroy();
+                }
 
-                    @Override
-                    public String toString() {
-                        return invoker.toString();
-                    }
-                };
-            }
+                @Override
+                public String toString() {
+                    return invoker.toString();
+                }
+            };
         }
         return last;
     }
@@ -101,6 +111,14 @@ public class ProtocolFilterWrapper implements Protocol {
         return protocol.getDefaultPort();
     }
 
+    /**
+     * 在使用具体的协议进行export是，filter都会参与来包装由特定协议包装返回的export
+     *
+     * @param invoker Service invoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
@@ -109,6 +127,15 @@ public class ProtocolFilterWrapper implements Protocol {
         return protocol.export(buildInvokerChain(invoker, Constants.SERVICE_FILTER_KEY, Constants.PROVIDER));
     }
 
+    /**
+     * 在使用具体的协议进行refer是，filter都会参与来包装由特定协议包装返回的invoker
+     *
+     * @param type Service class
+     * @param url  URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {

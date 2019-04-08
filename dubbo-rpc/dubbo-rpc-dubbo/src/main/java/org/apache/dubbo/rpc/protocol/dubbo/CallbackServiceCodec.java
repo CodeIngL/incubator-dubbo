@@ -53,15 +53,18 @@ class CallbackServiceCodec {
     private static byte isCallBack(URL url, String methodName, int argIndex) {
         // parameter callback rule: method-name.parameter-index(starting from 0).callback
         byte isCallback = CALLBACK_NONE;
-        if (url != null) {
-            String callback = url.getParameter(methodName + "." + argIndex + ".callback");
-            if (callback != null) {
-                if (callback.equalsIgnoreCase("true")) {
-                    isCallback = CALLBACK_CREATE;
-                } else if (callback.equalsIgnoreCase("false")) {
-                    isCallback = CALLBACK_DESTROY;
-                }
-            }
+        if (url == null){
+            return isCallback;
+        }
+        //关键的callback信息
+        String callback = url.getParameter(methodName + "." + argIndex + ".callback");
+        if (callback == null){
+            return isCallback;
+        }
+        if (callback.equalsIgnoreCase("true")) {
+            isCallback = CALLBACK_CREATE;
+        } else if (callback.equalsIgnoreCase("false")) {
+            isCallback = CALLBACK_DESTROY;
         }
         return isCallback;
     }
@@ -259,6 +262,16 @@ class CallbackServiceCodec {
         }
     }
 
+    /**
+     * 解码调用的参数
+     * @param channel
+     * @param inv
+     * @param pts
+     * @param paraIndex
+     * @param inObject
+     * @return
+     * @throws IOException
+     */
     public static Object decodeInvocationArgument(Channel channel, RpcInvocation inv, Class<?>[] pts, int paraIndex, Object inObject) throws IOException {
         // if it's a callback, create proxy on client side, callback interface on client side can be invoked through channel
         // need get URL from channel and env when decode
@@ -271,6 +284,7 @@ class CallbackServiceCodec {
             }
             return inObject;
         }
+        //是否是callback
         byte callbackStatus = isCallBack(url, inv.getMethodName(), paraIndex);
         switch (callbackStatus) {
             case CALLBACK_CREATE:

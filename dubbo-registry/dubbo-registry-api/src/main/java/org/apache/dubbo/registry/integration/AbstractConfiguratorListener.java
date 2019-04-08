@@ -38,15 +38,27 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
     protected List<Configurator> configurators = Collections.emptyList();
 
 
+    /**
+     * 初始化，进行相关的动态配置
+     * @param key
+     */
     protected final void initWith(String key) {
+        //获得动态配置
         DynamicConfiguration dynamicConfiguration = DynamicConfiguration.getDynamicConfiguration();
+        //添加相关的listener
         dynamicConfiguration.addListener(key, this);
+        //获得配置项
         String rawConfig = dynamicConfiguration.getConfig(key);
+        //存在需要处理
         if (!StringUtils.isEmpty(rawConfig)) {
             process(new ConfigChangeEvent(key, rawConfig));
         }
     }
 
+    /**
+     * 配置项发生改变需要处理
+     * @param event config change event
+     */
     @Override
     public void process(ConfigChangeEvent event) {
         if (logger.isInfoEnabled()) {
@@ -54,11 +66,13 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
                     ", raw config content is:\n " + event.getValue());
         }
 
+        //删除事件
         if (event.getChangeType().equals(ConfigChangeType.DELETED)) {
             configurators.clear();
         } else {
             try {
                 // parseConfigurators will recognize app/service config automatically.
+                // parseConfigurators将自动识别app/service配置。
                 configurators = Configurator.toConfigurators(ConfigParser.parseConfigurators(event.getValue()))
                         .orElse(configurators);
             } catch (Exception e) {
@@ -68,6 +82,7 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
             }
         }
 
+        //通知覆盖
         notifyOverrides();
     }
 

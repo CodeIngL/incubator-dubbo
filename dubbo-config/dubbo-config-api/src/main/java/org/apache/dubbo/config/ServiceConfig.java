@@ -113,6 +113,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     /**
      * The exported services
+     * 同一个service接口暴露的一组Exporter
      */
     private final List<Exporter<?>> exporters = new ArrayList<Exporter<?>>();
 
@@ -452,6 +453,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 map.put(Constants.METHODS_KEY, StringUtils.join(new HashSet<String>(Arrays.asList(methods)), ","));
             }
         }
+        /**
+         * 服务端配置的token，客户端调用必须要有这token
+         */
         if (!ConfigUtils.isEmpty(token)) {
             if (ConfigUtils.isDefault(token)) {
                 map.put(Constants.TOKEN_KEY, UUID.randomUUID().toString());

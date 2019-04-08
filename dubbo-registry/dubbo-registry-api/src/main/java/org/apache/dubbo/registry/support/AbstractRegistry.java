@@ -111,6 +111,12 @@ public abstract class AbstractRegistry implements Registry {
         notify(url.getBackupUrls());
     }
 
+    /**
+     * 注册中心，操作的是空的url，通过解决的方式，构建一个特殊的protocol，他的协议是empty
+     * @param url
+     * @param urls
+     * @return
+     */
     protected static List<URL> filterEmpty(URL url, List<URL> urls) {
         if (CollectionUtils.isEmpty(urls)) {
             List<URL> result = new ArrayList<>(1);

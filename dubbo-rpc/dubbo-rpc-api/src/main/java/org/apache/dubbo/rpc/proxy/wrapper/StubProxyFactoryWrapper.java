@@ -38,6 +38,7 @@ import java.lang.reflect.Constructor;
 
 /**
  * StubProxyFactoryWrapper
+ * 客户端的桩点，不同于rpc的Stub，我们称rpc中的客户端叫做stub，这里的stub则是客户端在接口上的桩点
  */
 public class StubProxyFactoryWrapper implements ProxyFactory {
 

@@ -47,11 +47,19 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
         this.connectTimeout = url.getPositiveParameter(Constants.CONNECT_TIMEOUT_KEY, Constants.DEFAULT_CONNECT_TIMEOUT);
     }
 
+    /**
+     * 获得编解码器
+     * @param url
+     * @return
+     */
     protected static Codec2 getChannelCodec(URL url) {
+        //默认是telnet
         String codecName = url.getParameter(Constants.CODEC_KEY, "telnet");
+        //查找相关的Codec2
         if (ExtensionLoader.getExtensionLoader(Codec2.class).hasExtension(codecName)) {
             return ExtensionLoader.getExtensionLoader(Codec2.class).getExtension(codecName);
         } else {
+            //查找Codec
             return new CodecAdapter(ExtensionLoader.getExtensionLoader(Codec.class)
                     .getExtension(codecName));
         }

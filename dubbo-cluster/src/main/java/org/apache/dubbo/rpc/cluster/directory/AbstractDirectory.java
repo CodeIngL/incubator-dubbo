@@ -47,6 +47,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     private volatile URL consumerUrl;
 
+    //再一个目录服务构造的时候应该完成，或者第一次构建的试试应该要完成的。
     protected RouterChain<T> routerChain;
 
     public AbstractDirectory(URL url) {

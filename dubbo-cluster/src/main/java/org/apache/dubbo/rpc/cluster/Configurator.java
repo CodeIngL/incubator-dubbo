@@ -76,17 +76,21 @@ public interface Configurator extends Comparable<Configurator> {
 
         List<Configurator> configurators = new ArrayList<>(urls.size());
         for (URL url : urls) {
+            //协议是空的，清楚全部
             if (Constants.EMPTY_PROTOCOL.equals(url.getProtocol())) {
                 configurators.clear();
                 break;
             }
+            //要覆盖的值
             Map<String, String> override = new HashMap<>(url.getParameters());
             //The anyhost parameter of override may be added automatically, it can't change the judgement of changing url
             override.remove(Constants.ANYHOST_KEY);
+            //空的，不需要进行应用
             if (override.size() == 0) {
                 configurators.clear();
                 continue;
             }
+            //根据url读取特定的实现
             configurators.add(configuratorFactory.getConfigurator(url));
         }
         Collections.sort(configurators);

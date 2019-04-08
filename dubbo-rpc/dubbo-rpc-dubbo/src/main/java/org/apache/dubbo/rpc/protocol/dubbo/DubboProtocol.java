@@ -92,6 +92,12 @@ public class DubboProtocol extends AbstractProtocol {
 
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
+        /**
+         * @param channel
+         * @param message
+         * @return
+         * @throws RemotingException
+         */
         @Override
         public CompletableFuture<Object> reply(ExchangeChannel channel, Object message) throws RemotingException {
 
@@ -102,6 +108,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
 
             Invocation inv = (Invocation) message;
+            //获得对应的invoker进行
             Invoker<?> invoker = getInvoker(channel, inv);
             // need to consider backward-compatibility if it's a callback
             if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
@@ -388,6 +395,14 @@ public class DubboProtocol extends AbstractProtocol {
         }
     }
 
+    /**
+     * 构建一个DubboInvoker
+     * @param serviceType
+     * @param url  URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(Class<T> serviceType, URL url) throws RpcException {
         optimizeSerialization(url);
@@ -399,20 +414,28 @@ public class DubboProtocol extends AbstractProtocol {
         return invoker;
     }
 
+    /**
+     * 为引用的目标构建网络客户端
+     * @param url 引用的目标
+     * @return
+     */
     private ExchangeClient[] getClients(URL url) {
         // whether to share connection
 
         boolean useShareConnect = false;
 
+        //支持的连接数
         int connections = url.getParameter(Constants.CONNECTIONS_KEY, 0);
         List<ReferenceCountExchangeClient> shareClients = null;
         // if not configured, connection is shared, otherwise, one connection for one service
         if (connections == 0) {
+            //使用共享的连接
             useShareConnect = true;
 
             /**
              * The xml configuration should have a higher priority than properties.
              */
+            //使用共享的连接数
             String shareConnectionsStr = url.getParameter(Constants.SHARE_CONNECTIONS_KEY, (String) null);
             connections = Integer.parseInt(StringUtils.isBlank(shareConnectionsStr) ? ConfigUtils.getProperty(Constants.SHARE_CONNECTIONS_KEY,
                     Constants.DEFAULT_SHARE_CONNECTIONS) : shareConnectionsStr);
@@ -563,19 +586,24 @@ public class DubboProtocol extends AbstractProtocol {
     /**
      * Create new connection
      *
+     * 构建自己的新连接
+     *
      * @param url
      */
     private ExchangeClient initClient(URL url) {
 
         // client type setting.
+        // 使用的网络框架类型
         String str = url.getParameter(Constants.CLIENT_KEY, url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_CLIENT));
 
+        //默认的解码编码器
         url = url.addParameter(Constants.CODEC_KEY, DubboCodec.NAME);
         // enable heartbeat by default
+        //默认的心跳数
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
 
         // BIO is not allowed since it has severe performance issue.
-        if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
+        if (isNotEmpty(str) && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported client type: " + str + "," +
                     " supported client type is " + StringUtils.join(ExtensionLoader.getExtensionLoader(Transporter.class).getSupportedExtensions(), " "));
         }
@@ -583,7 +611,7 @@ public class DubboProtocol extends AbstractProtocol {
         ExchangeClient client;
         try {
             // connection should be lazy
-            if (url.getParameter(Constants.LAZY_CONNECT_KEY, false)) {
+            if (url.getParameter(Constants.LAZY_CONNECT_KEY, false)) { //使用lazy连接
                 client = new LazyConnectExchangeClient(url, requestHandler);
 
             } else {

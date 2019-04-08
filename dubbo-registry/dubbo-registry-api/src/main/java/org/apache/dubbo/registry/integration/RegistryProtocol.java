@@ -361,8 +361,7 @@ public class RegistryProtocol implements Protocol {
         //获得注册中心，特定注册中心由url的protocol(协议）决定。ex:zookeeper
         Registry registry = registryFactory.getRegistry(url);
         if (RegistryService.class.equals(type)) {
-            //对于接口是RegistryService，直接获得Invoker后返回
-            return proxyFactory.getInvoker((T) registry, type, url);
+            return proxyFactory.getInvoker((T) registry, type, url);//对于接口是RegistryService，直接获得Invoker后返回
         }
 
         // group="a,b" or group="*"
@@ -375,7 +374,7 @@ public class RegistryProtocol implements Protocol {
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
-        //对于传递进来的接口引用，单个组的或者没有配置的，应使用默认的Cluster来聚集
+        //对于传递进来的接口引用，单个组的或者没有配置的，使用目录服务来确定
         return doRefer(cluster, registry, type, url);
     }
 
@@ -384,30 +383,44 @@ public class RegistryProtocol implements Protocol {
     }
 
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
+        //注册中心的目录服务和Static这是会动态变化的
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
         // all attributes of REFER_KEY
         Map<String, String> parameters = new HashMap<String, String>(directory.getUrl().getParameters());
+        //要订阅的地址
         URL subscribeUrl = new URL(CONSUMER_PROTOCOL, parameters.remove(REGISTER_IP_KEY), 0, type.getName(), parameters);
         if (!ANY_VALUE.equals(url.getServiceInterface()) && url.getParameter(REGISTER_KEY, true)) {
+            //设置要注册的订阅地址
             directory.setRegisteredConsumerUrl(getRegisteredConsumerUrl(subscribeUrl, url));
+            //注册相关的订阅地址
             registry.register(directory.getRegisteredConsumerUrl());
         }
         directory.buildRouterChain(subscribeUrl);
+        //订阅
         directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY,
                 PROVIDERS_CATEGORY + "," + CONFIGURATORS_CATEGORY + "," + ROUTERS_CATEGORY));
 
+        //注册Protocol本来就有cluster的性质
         Invoker invoker = cluster.join(directory);
         ProviderConsumerRegTable.registerConsumer(invoker, url, subscribeUrl, directory);
         return invoker;
     }
 
+    /**
+     * 注册要订阅的地址
+     * @param consumerUrl
+     * @param registryUrl
+     * @return
+     */
     public URL getRegisteredConsumerUrl(final URL consumerUrl, URL registryUrl) {
+        //是否使用比较简单的方式
         if (!registryUrl.getParameter(SIMPLIFIED_KEY, false)) {
             return consumerUrl.addParameters(CATEGORY_KEY, CONSUMERS_CATEGORY,
                     CHECK_KEY, String.valueOf(false));
         } else {
+            //使用复杂的方式
             return URL.valueOf(consumerUrl, DEFAULT_REGISTER_CONSUMER_KEYS, null).addParameters(
                     CATEGORY_KEY, CONSUMERS_CATEGORY, CHECK_KEY, String.valueOf(false));
         }

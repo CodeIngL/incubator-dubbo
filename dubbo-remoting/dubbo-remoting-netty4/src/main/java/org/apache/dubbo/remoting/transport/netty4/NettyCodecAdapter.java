@@ -39,6 +39,9 @@ final public class NettyCodecAdapter {
 
     private final ChannelHandler decoder = new InternalDecoder();
 
+    /**
+     * dubbo编码解码器
+     */
     private final Codec2 codec;
 
     private final URL url;
@@ -59,6 +62,9 @@ final public class NettyCodecAdapter {
         return decoder;
     }
 
+    /**
+     * 编码器
+     */
     private class InternalEncoder extends MessageToByteEncoder {
 
         @Override
@@ -74,34 +80,42 @@ final public class NettyCodecAdapter {
         }
     }
 
+    /**
+     * 解码器
+     */
     private class InternalDecoder extends ByteToMessageDecoder {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf input, List<Object> out) throws Exception {
 
+            //buf包装为ChannelBuffer
             ChannelBuffer message = new NettyBackedChannelBuffer(input);
 
+            //获得一个channel
             NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
 
             try {
                 // decode object.
                 do {
+                    //读流量
                     int saveReaderIndex = message.readerIndex();
+                    //解析
                     Object msg = codec.decode(channel, message);
                     if (msg == Codec2.DecodeResult.NEED_MORE_INPUT) {
-                        message.readerIndex(saveReaderIndex);
-                        break;
+                        message.readerIndex(saveReaderIndex);//还要读更多
+                        break;//退掉
                     } else {
                         //is it possible to go here ?
-                        if (saveReaderIndex == message.readerIndex()) {
+                        if (saveReaderIndex == message.readerIndex()) { //没用数据
                             throw new IOException("Decode without read data.");
                         }
-                        if (msg != null) {
+                        if (msg != null) {//添加到输出的对象
                             out.add(msg);
                         }
                     }
-                } while (message.readable());
+                } while (message.readable()); //不断的读
             } finally {
+                //异常，推出连接后，删除对应的关系
                 NettyChannel.removeChannelIfDisconnected(ctx.channel());
             }
         }

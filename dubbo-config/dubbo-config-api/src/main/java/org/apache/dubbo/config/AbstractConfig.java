@@ -498,16 +498,18 @@ public abstract class AbstractConfig implements Serializable {
             try {
                 String name = method.getName();
                 if (isMetaMethod(method)) {
-                    String prop = calculateAttributeFromGetter(name);
+                    //方法名计算其名字
                     String key;
                     Parameter parameter = method.getAnnotation(Parameter.class);
+                    //存在注解，优先使用注解
                     if (parameter != null && parameter.key().length() > 0 && parameter.useKeyAsProperty()) {
                         key = parameter.key();
                     } else {
-                        key = prop;
+                        key = calculateAttributeFromGetter(name);
                     }
                     // treat url and configuration differently, the value should always present in configuration though it may not need to present in url.
                     //if (method.getReturnType() == Object.class || parameter != null && parameter.excluded()) {
+                    //不考虑parameter的作用这是和另一个方法最为重要的区别
                     if (method.getReturnType() == Object.class) {
                         metaData.put(key, null);
                         continue;
@@ -573,13 +575,17 @@ public abstract class AbstractConfig implements Serializable {
      */
     public void refresh() {
         try {
+            //获得在前缀和id下，获得相关的配置项
             CompositeConfiguration compositeConfiguration = Environment.getInstance().getConfiguration(getPrefix(), getId());
+            //基于内存的相关配置
             InmemoryConfiguration config = new InmemoryConfiguration(getPrefix(), getId());
             config.addProperties(getMetaData());
             if (Environment.getInstance().isConfigCenterFirst()) {
+                //不一样的顺序，不一样的顺序
                 // The sequence would be: SystemConfiguration -> AppExternalConfiguration -> ExternalConfiguration -> AbstractConfig -> PropertiesConfiguration
                 compositeConfiguration.addConfiguration(3, config);
             } else {
+                //不一样的顺序
                 // The sequence would be: SystemConfiguration -> AbstractConfig -> AppExternalConfiguration -> ExternalConfiguration -> PropertiesConfiguration
                 compositeConfiguration.addConfiguration(1, config);
             }
@@ -591,6 +597,7 @@ public abstract class AbstractConfig implements Serializable {
                     continue;
                 }
                 try {
+                    //进行相关的设置
                     String value = StringUtils.trim(compositeConfiguration.getString(extractPropertyName(cls, method)));
                     // isTypeMatch() is called to avoid duplicate and incorrect update, for example, we have two 'setGeneric' methods in ReferenceConfig.
                     if (StringUtils.isNotEmpty(value) && ClassHelper.isTypeMatch(method.getParameterTypes()[0], value)) {
@@ -646,6 +653,11 @@ public abstract class AbstractConfig implements Serializable {
         return true;
     }
 
+    /**
+     * 是否一个能导出数据的方法
+     * @param method
+     * @return
+     */
     private boolean isMetaMethod(Method method) {
         String name = method.getName();
         if (!(name.startsWith("get") || name.startsWith("is"))) {

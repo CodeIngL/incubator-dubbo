@@ -43,6 +43,7 @@ import java.io.InputStream;
 
 /**
  * ExchangeCodec.
+ * 支持交互的编解码器
  */
 public class ExchangeCodec extends TelnetCodec {
 
