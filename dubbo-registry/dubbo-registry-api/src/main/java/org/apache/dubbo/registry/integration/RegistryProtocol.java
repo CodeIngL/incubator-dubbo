@@ -91,7 +91,7 @@ import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
 import static org.apache.dubbo.common.utils.UrlUtils.classifyUrls;
 
 /**
- * RegistryProtocol
+ * RegistryProtocol，这是一个特殊的Protocol，这是一个关于注册中心的Protocol，因此他不从AbstractProtocol派生。
  */
 public class RegistryProtocol implements Protocol {
 
@@ -168,6 +168,7 @@ public class RegistryProtocol implements Protocol {
 
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+        // 获取注册中心 URL，以 zookeeper 注册中心为例，得到的示例 URL 如下：
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
         URL providerUrl = getProviderUrl(originInvoker);
@@ -182,10 +183,13 @@ public class RegistryProtocol implements Protocol {
 
         providerUrl = overrideUrlWithConfig(providerUrl, overrideSubscribeListener);
         //export invoker
+        // 导出服务
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
         // url to registry
+        // 根据 URL 加载 Registry 实现类，比如 ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
+        // 获取已注册的服务提供者 URL，比如：
         final URL registeredProviderUrl = getRegisteredProviderUrl(providerUrl, registryUrl);
         ProviderInvokerWrapper<T> providerInvokerWrapper = ProviderConsumerRegTable.registerProvider(originInvoker,
                 registryUrl, registeredProviderUrl);
@@ -202,6 +206,7 @@ public class RegistryProtocol implements Protocol {
         exporter.setRegisterUrl(registeredProviderUrl);
         exporter.setSubscribeUrl(overrideSubscribeUrl);
         //Ensure that a new exporter instance is returned every time export
+        // 创建并返回 DestroyableExporter
         return new DestroyableExporter<>(exporter);
     }
 

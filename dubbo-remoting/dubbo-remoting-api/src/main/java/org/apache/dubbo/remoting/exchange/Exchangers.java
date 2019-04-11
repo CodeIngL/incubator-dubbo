@@ -28,6 +28,7 @@ import org.apache.dubbo.remoting.transport.ChannelHandlerAdapter;
 
 /**
  * Exchanger facade. (API, Static, ThreadSafe)
+ * 工具类
  */
 public class Exchangers {
 
@@ -59,6 +60,13 @@ public class Exchangers {
         return bind(URL.valueOf(url), handler);
     }
 
+    /**
+     * 绑定服务
+     * @param url
+     * @param handler
+     * @return
+     * @throws RemotingException
+     */
     public static ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
         if (url == null) {
             throw new IllegalArgumentException("url is null");

@@ -26,6 +26,11 @@ import org.yaml.snakeyaml.constructor.Constructor;
  */
 public class TagRuleParser {
 
+    /**
+     * 解析规则
+     * @param rawRule
+     * @return
+     */
     public static TagRouterRule parse(String rawRule) {
         Constructor constructor = new Constructor(TagRouterRule.class);
         TypeDescription tagDescription = new TypeDescription(TagRouterRule.class);

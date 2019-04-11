@@ -42,6 +42,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * mocker可以解析文本作为一段代码段返回，亦可以有着对应的实现，不过这个实现只是简单的被构造了。没有任何的属性注入
+ * 同样的不同于Cluster上的MockClusterMocker,特定的应用不一定适用集群方式，因此为了一致在特定的Invoker下总是需要这个
+ * MockInvoker
  *
  * TODO usr objectFactory来完成这个的注入
  * @param <T>

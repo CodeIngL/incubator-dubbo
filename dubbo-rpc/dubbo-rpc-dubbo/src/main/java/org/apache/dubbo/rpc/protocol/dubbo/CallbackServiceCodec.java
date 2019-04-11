@@ -71,6 +71,9 @@ class CallbackServiceCodec {
 
     /**
      * export or unexport callback service on client side
+     * <p>
+     *     客户端的export或unexport回调服务
+     * </p>
      *
      * @param channel
      * @param url
@@ -81,24 +84,28 @@ class CallbackServiceCodec {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static String exportOrUnexportCallbackService(Channel channel, URL url, Class clazz, Object inst, Boolean export) throws IOException {
+        //实例id
         int instid = System.identityHashCode(inst);
 
         Map<String, String> params = new HashMap<>(3);
-        // no need to new client again
+        // 再也不需要新客户了
         params.put(Constants.IS_SERVER_KEY, Boolean.FALSE.toString());
-        // mark it's a callback, for troubleshooting
+        // 标记它是一个回调，用于故障排除
         params.put(Constants.IS_CALLBACK_SERVICE, Boolean.TRUE.toString());
+        //group
         String group = (url == null ? null : url.getParameter(Constants.GROUP_KEY));
         if (group != null && group.length() > 0) {
             params.put(Constants.GROUP_KEY, group);
         }
-        // add method, for verifying against method, automatic fallback (see dubbo protocol)
+        // add方法，用于验证方法，自动回退（参见dubbo协议）
         params.put(Constants.METHODS_KEY, StringUtils.join(Wrapper.getWrapper(clazz).getDeclaredMethodNames(), ","));
 
+        //参数
         Map<String, String> tmpMap = new HashMap<>(url.getParameters());
         tmpMap.putAll(params);
         tmpMap.remove(Constants.VERSION_KEY);// doesn't need to distinguish version for callback
         tmpMap.put(Constants.INTERFACE_KEY, clazz.getName());
+        //暴露的url
         URL exportUrl = new URL(DubboProtocol.NAME, channel.getLocalAddress().getAddress().getHostAddress(), channel.getLocalAddress().getPort(), clazz.getName() + "." + instid, tmpMap);
 
         // no need to generate multiple exporters for different channel in the same JVM, cache key cannot collide.
@@ -130,13 +137,16 @@ class CallbackServiceCodec {
 
     /**
      * refer or destroy callback service on server side
-     *
+     * <p>
+     *     在服务器端引用或销毁回调服务
      * @param url
      */
     @SuppressWarnings("unchecked")
     private static Object referOrDestroyCallbackService(Channel channel, URL url, Class<?> clazz, Invocation inv, int instid, boolean isRefer) {
         Object proxy = null;
+        //获得invopkerkey的标识
         String invokerCacheKey = getServerSideCallbackInvokerCacheKey(channel, clazz.getName(), instid);
+        //获得proxy的标识
         String proxyCacheKey = getServerSideCallbackServiceCacheKey(channel, clazz.getName(), instid);
         proxy = channel.getAttribute(proxyCacheKey);
         String countkey = getServerSideCountKey(channel, clazz.getName());
@@ -245,13 +255,21 @@ class CallbackServiceCodec {
         }
     }
 
+    /**
+     * 编码要进行rpc调用的参数
+     * @param channel
+     * @param inv
+     * @param paraIndex 参数坐标
+     * @return
+     * @throws IOException
+     */
     public static Object encodeInvocationArgument(Channel channel, RpcInvocation inv, int paraIndex) throws IOException {
         // get URL directly
-        URL url = inv.getInvoker() == null ? null : inv.getInvoker().getUrl();
-        byte callbackStatus = isCallBack(url, inv.getMethodName(), paraIndex);
-        Object[] args = inv.getArguments();
-        Class<?>[] pts = inv.getParameterTypes();
-        switch (callbackStatus) {
+        URL url = inv.getInvoker() == null ? null : inv.getInvoker().getUrl(); //获得目的url
+        byte callbackStatus = isCallBack(url, inv.getMethodName(), paraIndex); //是否是callback
+        Object[] args = inv.getArguments(); //参数
+        Class<?>[] pts = inv.getParameterTypes(); //参数类型
+        switch (callbackStatus) { //是否是callback
             case CallbackServiceCodec.CALLBACK_CREATE:
             case CallbackServiceCodec.CALLBACK_DESTROY:
                 inv.setAttachment(INV_ATT_CALLBACK_KEY + paraIndex, exportOrUnexportCallbackService(channel, url, pts[paraIndex], args[paraIndex], callbackStatus == CALLBACK_CREATE));
@@ -263,7 +281,7 @@ class CallbackServiceCodec {
     }
 
     /**
-     * 解码调用的参数
+     * 解码rpc调用的参数
      * @param channel
      * @param inv
      * @param pts

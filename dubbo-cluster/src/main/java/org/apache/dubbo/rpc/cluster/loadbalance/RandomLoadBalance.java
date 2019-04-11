@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
+ * 加权随机算法
  * random load balance.
  */
 public class RandomLoadBalance extends AbstractLoadBalance {
@@ -42,29 +43,44 @@ public class RandomLoadBalance extends AbstractLoadBalance {
         int firstWeight = getWeight(invokers.get(0), invocation);
         weights[0] = firstWeight;
         // The sum of weights
+        // 下面这个循环有两个作用，第一是计算总权重 totalWeight，
+        // 第二是检测每个服务提供者的权重是否相同
         int totalWeight = firstWeight;
         for (int i = 1; i < length; i++) {
+            //获得每一个invoker的权重
             int weight = getWeight(invokers.get(i), invocation);
             // save for later use
             weights[i] = weight;
             // Sum
             totalWeight += weight;
+            // 检测所有的权重是否存在着不相同的话，有就是false。
             if (sameWeight && weight != firstWeight) {
                 sameWeight = false;
             }
         }
+        // 下面的 if 分支主要用于获取随机数，并计算随机数落在哪个区间上
         if (totalWeight > 0 && !sameWeight) {
             // If (not every invoker has the same weight & at least one invoker's weight>0), select randomly based on totalWeight.
+            // 随机获取一个 [0, totalWeight) 区间内的数字
             int offset = ThreadLocalRandom.current().nextInt(totalWeight);
             // Return a invoker based on the random value.
+            // 循环让 offset 数减去服务提供者权重值，当 offset 小于0时，返回相应的 Invoker。
+            // 举例说明一下，我们有 servers = [A, B, C]，weights = [5, 3, 2]，offset = 7。
+            // 第一次循环，offset - 5 = 2 > 0，即 offset > 5，
+            // 表明其不会落在服务器 A 对应的区间上。
+            // 第二次循环，offset - 3 = -1 < 0，即 5 < offset < 8，
+            // 表明其会落在服务器 B 对应的区间上
             for (int i = 0; i < length; i++) {
+                // 让随机值 offset 减去权重值
                 offset -= weights[i];
                 if (offset < 0) {
+                    // 返回相应的 Invoker
                     return invokers.get(i);
                 }
             }
         }
         // If all invokers have the same weight value or totalWeight=0, return evenly.
+        // 如果所有服务提供者权重值相同，此时直接随机返回一个即可
         return invokers.get(ThreadLocalRandom.current().nextInt(length));
     }
 

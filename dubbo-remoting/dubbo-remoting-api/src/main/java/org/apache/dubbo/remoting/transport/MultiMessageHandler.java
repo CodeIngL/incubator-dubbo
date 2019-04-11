@@ -22,7 +22,7 @@ import org.apache.dubbo.remoting.RemotingException;
 import org.apache.dubbo.remoting.exchange.support.MultiMessage;
 
 /**
- *
+ * 多消息的支持
  * @see MultiMessage
  */
 public class MultiMessageHandler extends AbstractChannelHandlerDelegate {

@@ -52,8 +52,10 @@ public class HeaderExchangeClient implements ExchangeClient {
     public HeaderExchangeClient(Client client, boolean startTimer) {
         Assert.notNull(client, "Client can't be null");
         this.client = client;
+        //代表了网络通信间的通道，因此包含了特定的网络客户端，网络客户端本身是channel
         this.channel = new HeaderExchangeChannel(client);
 
+        //开启心跳检测任务，重连任务
         if (startTimer) {
             URL url = client.getUrl();
             startReconnectTask(url);
@@ -63,6 +65,7 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     @Override
     public ResponseFuture request(Object request) throws RemotingException {
+        // 直接 HeaderExchangeChannel 对象的同签名方法
         return channel.request(request);
     }
 
@@ -78,6 +81,7 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     @Override
     public ResponseFuture request(Object request, int timeout) throws RemotingException {
+        // 直接 HeaderExchangeChannel 对象的同签名方法
         return channel.request(request, timeout);
     }
 

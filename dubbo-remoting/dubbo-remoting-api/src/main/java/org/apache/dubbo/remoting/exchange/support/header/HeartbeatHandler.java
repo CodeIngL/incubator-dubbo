@@ -27,6 +27,9 @@ import org.apache.dubbo.remoting.exchange.Request;
 import org.apache.dubbo.remoting.exchange.Response;
 import org.apache.dubbo.remoting.transport.AbstractChannelHandlerDelegate;
 
+/**
+ * 心跳heartbeat的支持，心跳之后就是正式分发处理模型，再选择的分发处理模型进行对请求的处理
+ */
 public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
 
     private static final Logger logger = LoggerFactory.getLogger(HeartbeatHandler.class);
@@ -62,7 +65,7 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         setReadTimestamp(channel);
-        if (isHeartbeatRequest(message)) {
+        if (isHeartbeatRequest(message)) {//如果是心跳请求
             Request req = (Request) message;
             if (req.isTwoWay()) {
                 Response res = new Response(req.getId(), req.getVersion());
@@ -79,7 +82,7 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             }
             return;
         }
-        if (isHeartbeatResponse(message)) {
+        if (isHeartbeatResponse(message)) {//如果是心跳响应
             if (logger.isDebugEnabled()) {
                 logger.debug("Receive heartbeat response in thread " + Thread.currentThread().getName());
             }

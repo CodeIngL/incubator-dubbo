@@ -38,11 +38,19 @@ public final class DubboCountCodec implements Codec2 {
         codec.encode(channel, buffer, msg);
     }
 
+    /**
+     * 多个包
+     * @param channel
+     * @param buffer
+     * @return
+     * @throws IOException
+     */
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int save = buffer.readerIndex();
         MultiMessage result = MultiMessage.create();
         do {
+            //单个
             Object obj = codec.decode(channel, buffer);
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);

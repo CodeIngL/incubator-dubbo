@@ -238,24 +238,34 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return null;
     }
 
+    /**
+     * cluster下，支持不同clusterInvoker的调用抽象，通过doInvoker回调子类特定的实现
+     * 注意 mockClusterInvoker只是一个Wrapper，和具体的ClusterInvoker存在着相当的区别
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
         //检查接口是否已经关闭
         checkWhetherDestroyed();
 
-        // binding attachments into invocation.
-        // 绑定上下文中的contextAttachments到调用的抽象RpcInvocation中
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (isNotEmptyMap(contextAttachments)) {
+            //将上下文的attachMents写入RpcInvocation的attachments
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
         }
 
-        //显示invocation对应的invoker列表，由目录服务支持
+        //由集群下的目录服务提供invocation对应的invokers列表
         List<Invoker<T>> invokers = list(invocation);
 
-        //选择对应loadBalance
+        //初始化rpc该调用下的对应的loadBalance，如果有的话，默认使用randomLoadBalance
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
+
+        //如果url支持异步的话，添加异步调用id
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
+
+        //回调子类的实现
         return doInvoke(invocation, invokers, loadbalance);
     }
 
@@ -272,6 +282,11 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return getInterface() + " -> " + getUrl().toString();
     }
 
+    /**
+     * 校验一下集群对应的invoker，没有的话需要抛出异常
+     * @param invokers
+     * @param invocation
+     */
     protected void checkInvokers(List<Invoker<T>> invokers, Invocation invocation) {
         if (CollectionUtils.isEmpty(invokers)) {
             throw new RpcException(RpcException.NO_INVOKER_AVAILABLE_AFTER_FILTER, "Failed to invoke the method "
@@ -284,6 +299,17 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         }
     }
 
+    /**
+     * 任何支持集群形式的rpc接口，使用的集群策略，其实现都应该使用实现这个方法
+     * 来实现基于特定集群调用的策略。
+     * <p>
+     *     除了mockClusterInvoker，这个是一个特殊wrapper而已
+     * @param invocation
+     * @param invokers
+     * @param loadbalance
+     * @return
+     * @throws RpcException
+     */
     protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers,
                                        LoadBalance loadbalance) throws RpcException;
 

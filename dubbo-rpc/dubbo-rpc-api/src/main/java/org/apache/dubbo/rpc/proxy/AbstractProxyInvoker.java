@@ -83,6 +83,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     public Result invoke(Invocation invocation) throws RpcException {
         RpcContext rpcContext = RpcContext.getContext();
         try {
+            // 调用 doInvoke 执行后续的调用，并将调用结果封装到 RpcResult 中，并
             Object obj = doInvoke(proxy, invocation.getMethodName(), invocation.getParameterTypes(), invocation.getArguments());
             if (RpcUtils.isReturnTypeFuture(invocation)) {
                 return new AsyncRpcResult((CompletableFuture<Object>) obj);

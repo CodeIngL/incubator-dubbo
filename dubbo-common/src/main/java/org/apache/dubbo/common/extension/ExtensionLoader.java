@@ -94,6 +94,7 @@ public class ExtensionLoader<T> {
 
     /**
      * type的普通的Extension类型和其实例的映射，
+     *
      * @see #cachedClasses
      */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>();
@@ -240,6 +241,7 @@ public class ExtensionLoader<T> {
      * 1. 当前线程的类加载器
      * 2. 加载ExtensionLoader的类加载器
      * 3. getSystemClassLoader()
+     *
      * @return 类加载
      */
     private static ClassLoader findClassLoader() {
@@ -249,6 +251,7 @@ public class ExtensionLoader<T> {
     /**
      * 获得Extension对应的扩展名
      * tip，第一次加载Extension产生的扩展名
+     *
      * @param extensionInstance 具体的Extension实例
      * @return 名称
      * @see #getExtensionName(Class)
@@ -262,6 +265,7 @@ public class ExtensionLoader<T> {
      * 获得Extension类对应的扩展名
      * tip，第一次加载Extension产生的扩展名
      * 没有触发loader的情况下会先触发加载
+     *
      * @param extensionClass 具体的Extension类
      * @return 名称
      * @see #cachedNames
@@ -587,25 +591,24 @@ public class ExtensionLoader<T> {
     @SuppressWarnings("unchecked")
     public T getAdaptiveExtension() {
         Object instance = cachedAdaptiveInstance.get();
-        if (instance == null) {
-            if (createAdaptiveInstanceError == null) {
-                synchronized (cachedAdaptiveInstance) {
-                    instance = cachedAdaptiveInstance.get();
-                    if (instance == null) {
-                        try {
-                            instance = createAdaptiveExtension();
-                            cachedAdaptiveInstance.set(instance);
-                        } catch (Throwable t) {
-                            createAdaptiveInstanceError = t;
-                            throw new IllegalStateException("Failed to create adaptive instance: " + t.toString(), t);
-                        }
-                    }
+        if (instance != null) {
+            return (T) instance;
+        }
+        if (createAdaptiveInstanceError != null) {
+            throw new IllegalStateException("Failed to create adaptive instance: " + createAdaptiveInstanceError.toString(), createAdaptiveInstanceError);
+        }
+        synchronized (cachedAdaptiveInstance) {
+            instance = cachedAdaptiveInstance.get();
+            if (instance == null) {
+                try {
+                    instance = createAdaptiveExtension();
+                    cachedAdaptiveInstance.set(instance);
+                } catch (Throwable t) {
+                    createAdaptiveInstanceError = t;
+                    throw new IllegalStateException("Failed to create adaptive instance: " + t.toString(), t);
                 }
-            } else {
-                throw new IllegalStateException("Failed to create adaptive instance: " + createAdaptiveInstanceError.toString(), createAdaptiveInstanceError);
             }
         }
-
         return (T) instance;
     }
 

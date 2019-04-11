@@ -49,6 +49,7 @@ public class NettyClientHandler extends ChannelDuplexHandler {
             throw new IllegalArgumentException("handler == null");
         }
         this.url = url;
+        // 这里的 handler 类型为 NettyClient
         this.handler = handler;
     }
 
@@ -74,8 +75,10 @@ public class NettyClientHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 获取 NettyChannel
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         try {
+            // 继续向下调用
             handler.received(channel, msg);
         } finally {
             NettyChannel.removeChannelIfDisconnected(ctx.channel());

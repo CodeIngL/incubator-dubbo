@@ -38,6 +38,7 @@ public abstract class AbstractProtocol implements Protocol {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    //exporter代表了特定的服务标识，和对应的暴露在在该Protocol下的管理
     protected final Map<String, Exporter<?>> exporterMap = new ConcurrentHashMap<String, Exporter<?>>();
 
     //TODO SOFEREFENCE
@@ -49,6 +50,15 @@ public abstract class AbstractProtocol implements Protocol {
                 url.getParameter(Constants.GROUP_KEY));
     }
 
+    /**
+     * serviceKey用于标识一个rpc接口（服务）一般来说是我们内存中的不同服务，因此其不需要ip
+     * 我们通过端口，方法名，方法版本，方法组就能在内存中区分在这个Protocol下的不同服务，因此这里也不需要服务的类型。
+     * @param port
+     * @param serviceName
+     * @param serviceVersion
+     * @param serviceGroup
+     * @return
+     */
     protected static String serviceKey(int port, String serviceName, String serviceVersion, String serviceGroup) {
         return ProtocolUtils.serviceKey(port, serviceName, serviceVersion, serviceGroup);
     }

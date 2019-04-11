@@ -41,6 +41,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractInvoker.
+ * 代表了一个能够发起支持rpc的invoker，其目标是明确的，而不是集群形式的
+ *
+ * @see #AbstractClusterInvoker
  */
 public abstract class AbstractInvoker<T> implements Invoker<T> {
 
@@ -127,7 +130,7 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
     }
 
     /**
-     * invoker的基本操作，具体的逻辑委托给子类实现
+     * 和AbstractClusterInvoker一样，同样执行一步分共同的逻辑，特定的逻辑则委派给子类进行特定的处理
      * @param inv
      * @return
      * @throws RpcException
@@ -139,11 +142,13 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
             logger.warn("Invoker for service " + this + " on consumer " + NetUtils.getLocalHost() + " is destroyed, "
                     + ", dubbo version is " + Version.getVersion() + ", this invoker should not be used any longer");
         }
+        //设置本次执行的invoker，现在可以对应起来
         RpcInvocation invocation = (RpcInvocation) inv;
-        //设置当前的invoker
         invocation.setInvoker(this);
-        //添加相关要加入的信息
+
+
         if (CollectionUtils.isNotEmptyMap(attachment)) {
+            // 将Invoker中的attachment添加到调用的rpc#attachment中
             invocation.addAttachmentsIfAbsent(attachment);
         }
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
@@ -154,16 +159,19 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
              * by the built-in retry mechanism of the Dubbo. The attachment to update RpcContext will no longer work, which is
              * a mistake in most cases (for example, through Filter to RpcContext output traceId and spanId and other information).
              */
+            //添加 contextAttachments 到 RpcInvocation#attachment 变量中
             invocation.addAttachments(contextAttachments);
         }
-        //是否是异步
         if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) {
+            // 设置异步信息到 RpcInvocation#attachment 中
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
-        //异步增加异步id
+        //异步增加异步id，这里还是需要，经过clusterInvoker做出了，但是特定Invoker总是不知道是否支持异步的，我们尝试添加异步支持如果
+        //与这个Invoker对应的url元信息是指定了支持异步调用的话，我们添加一个调用的id
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
         try {
+            //让我们去回调子类的实现
             return doInvoke(invocation);
         } catch (InvocationTargetException e) { // biz exception
             Throwable te = e.getTargetException();

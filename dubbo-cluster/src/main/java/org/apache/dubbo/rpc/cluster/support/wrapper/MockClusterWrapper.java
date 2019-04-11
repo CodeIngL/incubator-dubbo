@@ -24,6 +24,9 @@ import org.apache.dubbo.rpc.cluster.Directory;
 /**
  * mock impl
  *
+ * 因为是wrapper所以在Cluster的SPI下，总是会被调用，
+ * 这意味着join总是会触发
+ *
  */
 public class MockClusterWrapper implements Cluster {
 

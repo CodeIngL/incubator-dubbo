@@ -200,7 +200,11 @@ public abstract class Proxy {
                 pkg = PACKAGE_NAME;
             }
 
-            //创建ProxyInstance类
+            //创建ProxyInstance类实现了目标接口，共有三个两个字段两个构造函数
+            //static Method[] methods，代表了实现的所有接口定义的方法
+            //InvocationHandler handler
+            //一个无参数的构造函数和一个handler的构造函数
+            //所有的接口实现都是委托给handler进行调用
             //构建类名
             String pcn = pkg + ".proxy" + id;
             ccp.setClassName(pcn);

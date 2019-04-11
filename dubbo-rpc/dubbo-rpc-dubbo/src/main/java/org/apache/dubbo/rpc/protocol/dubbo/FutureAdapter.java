@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * FutureAdapter
+ * FutureAdapter，用于适配dubbo和java的Future
  */
 public class FutureAdapter<V> extends CompletableFuture<V> {
 

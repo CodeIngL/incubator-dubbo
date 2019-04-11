@@ -36,6 +36,9 @@ import java.net.InetSocketAddress;
 
 /**
  * Wrap the existing invoker on the channel.
+ * <p>
+ *     将现有的调用程序包装在channel上。
+ * </p>
  */
 class ChannelWrappedInvoker<T> extends AbstractInvoker<T> {
 

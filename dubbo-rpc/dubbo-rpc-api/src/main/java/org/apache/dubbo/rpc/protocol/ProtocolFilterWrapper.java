@@ -46,7 +46,8 @@ public class ProtocolFilterWrapper implements Protocol {
     }
 
     /**
-     * 用于在特定协议下返回时构建相应的Filter对协议对应的worker进行包装
+     * 用于在特定协议下返回时构建相应的Filter对协议对应的worker进行包装，专门用于单个的时候，而不是cluster的时候，
+     * 我们为每一个对应的invoker构建而不是clusterInvoker
      *
      * @param invoker
      * @param key
@@ -56,6 +57,9 @@ public class ProtocolFilterWrapper implements Protocol {
      */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
+        //得到需要应用filter
+        //可以程序一开始指定在url中指定对应的，service.filter或者reference.filter来启用我们需要的，而不是全部的分组下的filter
+        //或者重新export和refer是改变相应的url键
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
         if (filters.isEmpty()) {
             return last;
