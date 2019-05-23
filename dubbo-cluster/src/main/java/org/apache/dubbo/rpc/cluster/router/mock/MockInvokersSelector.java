@@ -30,6 +30,12 @@ import java.util.List;
 /**
  * A specific Router designed to realize mock feature.
  * If a request is configured to use mock, then this router guarantees that only the invokers with protocol MOCK appear in final the invoker list, all other invokers will be excluded.
+ * <p>
+ *     一个特定的路由器，旨在实现mock功能。
+ * </p>
+ * <p>
+ *     如果请求被配置为使用mock，则此路由器保证只有具有协议MOCK的调用者出现在最终的调用者列表中，所有其他调用者将被排除。
+ * </p>
  */
 public class MockInvokersSelector extends AbstractRouter {
 

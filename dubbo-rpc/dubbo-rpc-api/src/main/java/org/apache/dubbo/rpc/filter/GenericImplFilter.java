@@ -55,9 +55,7 @@ public class GenericImplFilter implements Filter {
         //获得泛化调用设置
         String generic = invoker.getUrl().getParameter(Constants.GENERIC_KEY);
         //设置了泛化调用，但是方法不是泛化调用的方法
-        if (ProtocolUtils.isGeneric(generic)
-                && !Constants.$INVOKE.equals(invocation.getMethodName())
-                && invocation instanceof RpcInvocation) {
+        if (ProtocolUtils.isGeneric(generic) && !Constants.$INVOKE.equals(invocation.getMethodName()) && invocation instanceof RpcInvocation) {
             RpcInvocation invocation2 = (RpcInvocation) invocation;
             String methodName = invocation2.getMethodName();
             Class<?>[] parameterTypes = invocation2.getParameterTypes();
@@ -98,11 +96,8 @@ public class GenericImplFilter implements Filter {
                             return new RpcResult(JavaBeanSerializeUtil.deserialize((JavaBeanDescriptor) value));
                         } else {
                             throw new RpcException(
-                                    "The type of result value is " +
-                                            value.getClass().getName() +
-                                            " other than " +
-                                            JavaBeanDescriptor.class.getName() +
-                                            ", and the result is " +
+                                    "The type of result value is " + value.getClass().getName() +
+                                            " other than " + JavaBeanDescriptor.class.getName() + ", and the result is " +
                                             value);
                         }
                     } else {

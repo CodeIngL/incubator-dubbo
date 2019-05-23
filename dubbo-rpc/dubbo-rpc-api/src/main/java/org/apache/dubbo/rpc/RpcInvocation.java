@@ -63,6 +63,8 @@ public class RpcInvocation implements Invocation, Serializable {
     public RpcInvocation() {
     }
 
+    //-----------------------构造函数----------------------------//
+
     /**
      * 由一个invocation对应到对应的invoker上
      *
@@ -119,6 +121,14 @@ public class RpcInvocation implements Invocation, Serializable {
         this(methodName, parameterTypes, arguments, attachments, null);
     }
 
+    /**
+     * 构建异常rpc调用传输的对象
+     * @param methodName 方法名
+     * @param parameterTypes 参数类型
+     * @param arguments 参数
+     * @param attachments 附件
+     * @param invoker 本次关联的invoker
+     */
     public RpcInvocation(String methodName, Class<?>[] parameterTypes, Object[] arguments, Map<String, String> attachments, Invoker<?> invoker) {
         this.methodName = methodName;
         this.parameterTypes = parameterTypes == null ? new Class<?>[0] : parameterTypes;

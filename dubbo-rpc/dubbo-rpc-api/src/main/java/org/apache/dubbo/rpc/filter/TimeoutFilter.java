@@ -31,6 +31,9 @@ import java.util.Arrays;
 
 /**
  * Log any invocation timeout, but don't stop server from running
+ * <p>
+ *     记录任何调用超时，但不要停止服务器运行
+ * </p>
  */
 @Activate(group = Constants.PROVIDER)
 public class TimeoutFilter implements Filter {
@@ -39,6 +42,13 @@ public class TimeoutFilter implements Filter {
 
     private static final String TIMEOUT_FILTER_START_TIME = "timeout_filter_start_time";
 
+    /**
+     * 记录超时的调用，但是不管其他事情,这里首先记录调用的开始时间，然后进行调用
+     * @param invoker    service
+     * @param invocation invocation.
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         if (invocation.getAttachments() != null) {
@@ -54,6 +64,13 @@ public class TimeoutFilter implements Filter {
         return invoker.invoke(invocation);
     }
 
+    /**
+     * 完成时，回调，我们记录一下完成的时间，并如果超时的话，打印相关的超时
+     * @param result
+     * @param invoker
+     * @param invocation
+     * @return
+     */
     @Override
     public Result onResponse(Result result, Invoker<?> invoker, Invocation invocation) {
         String startAttach = invocation.getAttachment(TIMEOUT_FILTER_START_TIME);

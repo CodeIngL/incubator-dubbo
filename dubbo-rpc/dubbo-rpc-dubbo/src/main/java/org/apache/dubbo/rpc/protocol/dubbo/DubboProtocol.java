@@ -91,11 +91,12 @@ public class DubboProtocol extends AbstractProtocol {
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<>();
 
     /**
-     * 最为核心的处理，找到对应的本地invoker实现，进行本地方法的调用
+     * 处理，找到对应的本地invoker实现，进行本地方法的调用。进行和远端的进行信息交互
      */
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
         /**
+         * 响应结果
          * @param channel
          * @param message
          * @return
@@ -114,7 +115,8 @@ public class DubboProtocol extends AbstractProtocol {
             //获得对应的invoker进行
             Invoker<?> invoker = getInvoker(channel, inv);
             // need to consider backward-compatibility if it's a callback
-            if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
+            // 如果是回调，则需要考虑向后兼容性
+            if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) { //_isCallBackServiceInvoke
                 String methodsStr = invoker.getUrl().getParameters().get("methods");
                 boolean hasMethod = false;
                 if (methodsStr == null || !methodsStr.contains(",")) {
@@ -130,8 +132,7 @@ public class DubboProtocol extends AbstractProtocol {
                 }
                 if (!hasMethod) {
                     logger.warn(new IllegalStateException("The methodName " + inv.getMethodName()
-                            + " not found in callback service interface ,invoke will be ignored."
-                            + " please update the api interface. url is:"
+                            + " not found in callback service interface ,invoke will be ignored. please update the api interface. url is:"
                             + invoker.getUrl()) + " ,invocation is :" + inv);
                     return null;
                 }
@@ -143,27 +144,39 @@ public class DubboProtocol extends AbstractProtocol {
 
             if (result instanceof AsyncRpcResult) {
                 return ((AsyncRpcResult) result).getResultFuture().thenApply(r -> (Object) r);
-
             } else {
                 return CompletableFuture.completedFuture(result);
             }
         }
 
+        /**
+         *  接收消息
+         * @param channel
+         * @param message
+         * @throws RemotingException
+         */
         @Override
         public void received(Channel channel, Object message) throws RemotingException {
             if (message instanceof Invocation) {
                 reply((ExchangeChannel) channel, message);
-
-            } else {
-                super.received(channel, message);
             }
         }
 
+        /**
+         * 连接时事件
+         * @param channel
+         * @throws RemotingException
+         */
         @Override
         public void connected(Channel channel) throws RemotingException {
             invoke(channel, Constants.ON_CONNECT_KEY);
         }
 
+        /**
+         * 断开时事件
+         * @param channel
+         * @throws RemotingException
+         */
         @Override
         public void disconnected(Channel channel) throws RemotingException {
             if (logger.isDebugEnabled()) {
@@ -172,6 +185,11 @@ public class DubboProtocol extends AbstractProtocol {
             invoke(channel, Constants.ON_DISCONNECT_KEY);
         }
 
+        /**
+         * 构建一个rpcInvocation，委托给received处理
+         * @param channel
+         * @param methodKey
+         */
         private void invoke(Channel channel, String methodKey) {
             Invocation invocation = createInvocation(channel, channel.getUrl(), methodKey);
             if (invocation != null) {
@@ -195,6 +213,7 @@ public class DubboProtocol extends AbstractProtocol {
             invocation.setAttachment(Constants.INTERFACE_KEY, url.getParameter(Constants.INTERFACE_KEY));
             invocation.setAttachment(Constants.VERSION_KEY, url.getParameter(Constants.VERSION_KEY));
             if (url.getParameter(Constants.STUB_EVENT_KEY, false)) {
+                //url中有相关参数，才会进行设置
                 invocation.setAttachment(Constants.STUB_EVENT_KEY, Boolean.TRUE.toString());
             }
 
@@ -208,8 +227,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     public static DubboProtocol getDubboProtocol() {
         if (INSTANCE == null) {
-            // load
-            ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(DubboProtocol.NAME);
+            ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(DubboProtocol.NAME);// load
         }
 
         return INSTANCE;
@@ -227,6 +245,12 @@ public class DubboProtocol extends AbstractProtocol {
         return exporterMap;
     }
 
+    /**
+     * 是客户端这边
+     *
+     * @param channel
+     * @return
+     */
     private boolean isClientSide(Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         URL url = channel.getUrl();
@@ -235,31 +259,38 @@ public class DubboProtocol extends AbstractProtocol {
                         .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
 
+    /**
+     * 获得invoker
+     *
+     * @param channel
+     * @param inv
+     * @return
+     * @throws RemotingException
+     */
     Invoker<?> getInvoker(Channel channel, Invocation inv) throws RemotingException {
         //回调和本地存根相关逻辑
         boolean isCallBackServiceInvoke = false;
         boolean isStubServiceInvoke = false;
         int port = channel.getLocalAddress().getPort();
-        String path = inv.getAttachments().get(Constants.PATH_KEY);
+        Map<String, String> attachments = inv.getAttachments();
+        String path = attachments.get(Constants.PATH_KEY);
 
-        // if it's callback service on client side
-        isStubServiceInvoke = Boolean.TRUE.toString().equals(inv.getAttachments().get(Constants.STUB_EVENT_KEY));
+        isStubServiceInvoke = Boolean.TRUE.toString().equals(attachments.get(Constants.STUB_EVENT_KEY));
         if (isStubServiceInvoke) {
-            port = channel.getRemoteAddress().getPort();
+            port = channel.getRemoteAddress().getPort();//使用远程端口
         }
 
-        //callback
         isCallBackServiceInvoke = isClientSide(channel) && !isStubServiceInvoke;
         if (isCallBackServiceInvoke) {
-            path += "." + inv.getAttachments().get(Constants.CALLBACK_SERVICE_KEY);
-            inv.getAttachments().put(IS_CALLBACK_SERVICE_INVOKE, Boolean.TRUE.toString());
+            //callback.service.instid
+            path += "." + attachments.get(Constants.CALLBACK_SERVICE_KEY);
+            //_isCallBackServiceInvoke
+            attachments.put(IS_CALLBACK_SERVICE_INVOKE, Boolean.TRUE.toString());
         }
 
         // 计算 service key，格式为 groupName/serviceName:serviceVersion:port。比如：
-        // dubbo/com.alibaba.dubbo.demo.DemoService:1.0.0:20880
-        String serviceKey = serviceKey(port, path, inv.getAttachments().get(Constants.VERSION_KEY), inv.getAttachments().get(Constants.GROUP_KEY));
+        String serviceKey = serviceKey(port, path, attachments.get(Constants.VERSION_KEY), attachments.get(Constants.GROUP_KEY));
         // 从 exporterMap 查找与 serviceKey 相对应的 DubboExporter 对象，
-        // 服务导出过程中会将 <serviceKey, DubboExporter> 映射关系存储到 exporterMap 集合中
         DubboExporter<?> exporter = (DubboExporter<?>) exporterMap.get(serviceKey);
 
         if (exporter == null) {
@@ -284,34 +315,32 @@ public class DubboProtocol extends AbstractProtocol {
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         URL url = invoker.getUrl();
 
-        // export service.
-        // 获取服务标识，理解成服务坐标也行。由服务组名，服务名，服务版本号以及端口组成。比如：
+        // 获取服务标识，理解成服务坐标也行。由组名，服务名，版本号以及端口组成。
         String key = serviceKey(url);
         // 创建 DubboExporter
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
         // 将 <key, exporter> 键值对放入缓存中
         exporterMap.put(key, exporter);
 
-        //export an stub service for dispatching event
+        // export an stub service for dispatching event
         // 本地存根相关代码
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT);
         Boolean isCallbackService = url.getParameter(Constants.IS_CALLBACK_SERVICE, false);
-        if (isStubSupportEvent && !isCallbackService) {
-            String stubServiceMethods = url.getParameter(Constants.STUB_EVENT_METHODS_KEY);
+        if (isStubSupportEvent && !isCallbackService) {//是本地stub，而不是callback
+            String stubServiceMethods = url.getParameter(Constants.STUB_EVENT_METHODS_KEY); //存根方法名
             if (isEmpty(stubServiceMethods)) {
                 if (logger.isWarnEnabled()) {
                     logger.warn(new IllegalStateException("consumer [" + url.getParameter(Constants.INTERFACE_KEY) +
                             "], has set stubProxy support event ,but no stub methods founded."));
                 }
-
             } else {
-                stubServiceMethodsMap.put(url.getServiceKey(), stubServiceMethods);
+                stubServiceMethodsMap.put(url.getServiceKey(), stubServiceMethods); //服务key对应的存根名
             }
         }
 
         // 启动服务器
         openServer(url);
-        // 优化序列化
+        // 优化序列化类
         optimizeSerialization(url);
 
         return exporter;
@@ -319,6 +348,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * 为指定的url开启一个服务，如果这个服务代表了服务端的话。
+     *
      * @param url
      */
     private void openServer(URL url) {
@@ -378,6 +408,12 @@ public class DubboProtocol extends AbstractProtocol {
         return server;
     }
 
+    /**
+     * 优化序列化类
+     *
+     * @param url
+     * @throws RpcException
+     */
     private void optimizeSerialization(URL url) throws RpcException {
         String className = url.getParameter(Constants.OPTIMIZER_KEY, "");
         if (isEmpty(className) || optimizers.contains(className)) {
@@ -417,8 +453,9 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * 构建一个DubboInvoker
+     *
      * @param serviceType
-     * @param url  URL address for the remote service
+     * @param url         URL address for the remote service
      * @param <T>
      * @return
      * @throws RpcException
@@ -437,6 +474,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * 为rpc构建目标构建网络客户端
+     *
      * @param url 引用的目标
      * @return
      */
@@ -485,7 +523,7 @@ public class DubboProtocol extends AbstractProtocol {
      * <li>检验客户端连接的有效性</li><br/>
      * </ul>
      *
-     * @param url 元信息
+     * @param url        元信息
      * @param connectNum connectNum must be greater than or equal to 1
      * @return 客户端
      */
@@ -607,7 +645,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     /**
      * Create new connection
-     *
+     * <p>
      * 构建非共享连接，单独服务于一个url
      *
      * @param url

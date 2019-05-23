@@ -22,6 +22,7 @@ import org.apache.dubbo.remoting.Dispatcher;
 
 /**
  * default thread pool configure
+ * 默认的分发模型
  */
 public class AllDispatcher implements Dispatcher {
 

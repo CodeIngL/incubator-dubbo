@@ -34,6 +34,9 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * NettyChannel.
+ * <p>
+ *     一个特殊的channel包装了网络框架的channel以及处理该channel内部处理器
+ * </p>
  */
 final class NettyChannel extends AbstractChannel {
 
@@ -111,9 +114,8 @@ final class NettyChannel extends AbstractChannel {
             //   1. true: 等待消息发出，消息发送失败将抛出异常
             //   2. false: 不等待消息发出，将消息放入 IO 队列，即刻返回
             // 默认情况下 sent = false；
-            if (sent) {
+            if (sent) {// 等待消息发出，若在规定时间没能发出，success 会被置为 false
                 timeout = getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
-                // 等待消息发出，若在规定时间没能发出，success 会被置为 false
                 success = future.await(timeout);
             }
             Throwable cause = future.cause();

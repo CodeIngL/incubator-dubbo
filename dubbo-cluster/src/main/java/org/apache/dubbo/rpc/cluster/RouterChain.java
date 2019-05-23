@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 /**
  * Router chain
+ * 路由链
  */
 public class RouterChain<T> {
 
@@ -37,7 +38,7 @@ public class RouterChain<T> {
     private List<Invoker<T>> invokers = Collections.emptyList();
 
     // containing all routers, reconstruct every time 'route://' urls change.
-    // 包含所有路由器，每次'route：//'url更改时重建。
+    // 包含所有路由器，每次'route://'url更改时重建。
     private volatile List<Router> routers = Collections.emptyList();
 
     // Fixed router instances: ConfigConditionRouter, TagRouter, e.g., the rule for each instance may change but the
@@ -46,7 +47,7 @@ public class RouterChain<T> {
     private List<Router> builtinRouters = Collections.emptyList();
 
     /**
-     * 路由链
+     * 为url构建路由链
      * @param url
      * @param <T>
      * @return
@@ -60,19 +61,22 @@ public class RouterChain<T> {
      * @param url
      */
     private RouterChain(URL url) {
+        //获得url对应的RouterFactory列表
         List<RouterFactory> extensionFactories = ExtensionLoader.getExtensionLoader(RouterFactory.class)
                 .getActivateExtension(url, (String[]) null);
 
+        // 利用Factory从url中提取相应的routers作为固定routers
         List<Router> routers = extensionFactories.stream()
                 .map(factory -> factory.getRouter(url))
                 .collect(Collectors.toList());
 
+        // 初始化
         initWithRouters(routers);
     }
 
     /**
      * the resident routers must being initialized before address notification.
-     * //构建固定路由器，在动态的调整之前，进行我们的构建
+     * 构建固定路由器，在动态的调整之前，进行我们的构建
      * FIXME: this method should not be public
      */
     public void initWithRouters(List<Router> builtinRouters) {
@@ -86,6 +90,11 @@ public class RouterChain<T> {
      * keep the routers up to date, that is, each time router URLs changes, we should update the routers list, only
      * keep the builtinRouters which are available all the time and the latest notified routers which are generated
      * from URLs.
+     * <p>
+     *     如果我们在2.7.0之前的版本中使用route://协议，每个URL都会生成一个Router实例，所以我们应该让路由器保持最新状态，
+     *     也就是说，每次路由器URL更改时，我们都应该更新路由器列表，
+     *     保留始终可用的builtinRouters以及从URL生成的最新通知路由器。
+     * </p>
      *
      * @param routers routers from 'router://' rules in 2.6.x or before.
      */

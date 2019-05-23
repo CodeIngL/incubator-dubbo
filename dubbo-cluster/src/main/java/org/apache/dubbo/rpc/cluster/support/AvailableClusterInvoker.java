@@ -27,6 +27,7 @@ import java.util.List;
 
 /**
  * AvailableCluster
+ * 集群下存在Invoke可用，就是可用的，不需要使用loadbalance
  *
  */
 public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {

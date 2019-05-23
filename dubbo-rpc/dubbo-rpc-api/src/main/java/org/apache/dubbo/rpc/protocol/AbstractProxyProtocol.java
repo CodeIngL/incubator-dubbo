@@ -163,6 +163,14 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
      */
     protected abstract <T> Runnable doExport(T impl, Class<T> type, URL url) throws RpcException;
 
+    /**
+     * 运行子类包装使用不同的方式进行引用，将接口基于特定技术的实现,暴露一个基于type的实现
+     * @param type
+     * @param url
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     protected abstract <T> T doRefer(Class<T> type, URL url) throws RpcException;
 
 }

@@ -28,6 +28,7 @@ import java.util.List;
 
 /**
  * AvailableCluster
+ * 可用的
  *
  */
 public class AvailableCluster implements Cluster {

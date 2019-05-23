@@ -105,6 +105,13 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      * b) Reselection, the validation rule for reselection: selected > available. This rule guarantees that
      * the selected invoker has the minimum chance to be one in the previously selected list, and also
      * guarantees this invoker is available.
+     * <p>
+     * 使用loadbalance策略选择一个调用者。
+     * a）首先，使用loadbalance选择一个调用者。 如果此调用者位于先前选择的list中，或者，
+     * 如果此调用者不可用，则继续执行步骤b（重新选择），否则返回第一个选定的调用者
+     * </p>
+     * <p>
+     * b）重新选择，重选的验证规则：选择>可用。 此规则保证所选调用者具有在先前所选列表中成为一个的最小机会，并且还保证该调用者可用。
      *
      * @param loadbalance load balance policy
      * @param invocation  invocation
@@ -121,7 +128,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         }
         String methodName = invocation == null ? StringUtils.EMPTY : invocation.getMethodName();
 
-        boolean sticky = invokers.get(0).getUrl()
+        boolean sticky = invokers.get(0).getUrl()//方法级的sticky
                 .getMethodParameter(methodName, Constants.CLUSTER_STICKY_KEY, Constants.DEFAULT_CLUSTER_STICKY);
 
         //ignore overloaded method
@@ -129,12 +136,16 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             stickyInvoker = null;
         }
         //ignore concurrency problem
+        //如果使用sticky，并且stickyInvoker存在以是选择列表中，如果可用，将使用stickyInvoker，不在触发loadbalance选择
         if (sticky && stickyInvoker != null && (selected == null || !selected.contains(stickyInvoker))) {
             if (availablecheck && stickyInvoker.isAvailable()) {
                 return stickyInvoker;
             }
         }
 
+        /**
+         * loadBalance进行选择，选择合适invoker
+         */
         Invoker<T> invoker = doSelect(loadbalance, invocation, invokers, selected);
 
         if (sticky) {
@@ -164,10 +175,11 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);//使用负载均衡进行选择
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
-        //  //如果 selected中包含（优先判断） 或者 不可用&&availablecheck=true 则reselect.
+        // 如果 selected中包含（优先判断） 或者 不可用&&availablecheck=true 则reselect.
         if ((selected != null && selected.contains(invoker))
                 || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
             try {
+                //触发reselect
                 Invoker<T> rInvoker = reselect(loadbalance, invocation, invokers, selected, availablecheck);
                 if (rInvoker != null) {
                     invoker = rInvoker;
@@ -204,10 +216,12 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                                 List<Invoker<T>> invokers, List<Invoker<T>> selected, boolean availablecheck) throws RpcException {
 
         //Allocating one in advance, this list is certain to be used.
+        //事先分配一个，肯定会使用此列表。
         List<Invoker<T>> reselectInvokers = new ArrayList<>(
                 invokers.size() > 1 ? (invokers.size() - 1) : invokers.size());
 
         // First, try picking a invoker not in `selected`.
+        // 首先，尝试选择不在“选定”中的调用者。
         for (Invoker<T> invoker : invokers) {
             if (availablecheck && !invoker.isAvailable()) {
                 continue;
@@ -218,11 +232,15 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             }
         }
 
+        /**
+         *  构建重选的列表。使用loadBalance进行筛选
+         */
         if (!reselectInvokers.isEmpty()) {
             return loadbalance.select(reselectInvokers, getUrl(), invocation);
         }
 
         // Just pick an available invoker using loadbalance policy
+        // 从已经选择的列表中，构建列表中进行筛选
         if (selected != null) {
             for (Invoker<T> invoker : selected) {
                 if ((invoker.isAvailable()) // available first
@@ -231,16 +249,21 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                 }
             }
         }
+        /**
+         *  构建重选的列表。使用loadBalance进行筛选
+         */
         if (!reselectInvokers.isEmpty()) {
             return loadbalance.select(reselectInvokers, getUrl(), invocation);
         }
 
+        //返回空
         return null;
     }
 
     /**
      * cluster下，支持不同clusterInvoker的调用抽象，通过doInvoker回调子类特定的实现
      * 注意 mockClusterInvoker只是一个Wrapper，和具体的ClusterInvoker存在着相当的区别
+     *
      * @param invocation
      * @return
      * @throws RpcException
@@ -252,20 +275,19 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (isNotEmptyMap(contextAttachments)) {
-            //将上下文的attachMents写入RpcInvocation的attachments
-            ((RpcInvocation) invocation).addAttachments(contextAttachments);
+            ((RpcInvocation) invocation).addAttachments(contextAttachments);//将上下文的attachments写入本次RPC调用的附件中
         }
 
-        //由集群下的目录服务提供invocation对应的invokers列表
+        //由目录服务为本次invocation筛选符合的invoker列表
         List<Invoker<T>> invokers = list(invocation);
 
-        //初始化rpc该调用下的对应的loadBalance，如果有的话，默认使用randomLoadBalance
+        //初始化本次rpc调用对应的loadBalance，默认:randomLoadBalance
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
 
-        //如果url支持异步的话，添加异步调用id
+        //如果本次调用是支持异步的话，添加异步调用id
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
-        //回调子类的实现
+        //回调子类实现。Note:loadBalance在某些实现中由于本身的语义是不会被使用。
         return doInvoke(invocation, invokers, loadbalance);
     }
 
@@ -284,6 +306,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     /**
      * 校验一下集群对应的invoker，没有的话需要抛出异常
+     *
      * @param invokers
      * @param invocation
      */
@@ -303,7 +326,8 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      * 任何支持集群形式的rpc接口，使用的集群策略，其实现都应该使用实现这个方法
      * 来实现基于特定集群调用的策略。
      * <p>
-     *     除了mockClusterInvoker，这个是一个特殊wrapper而已
+     * 除了mockClusterInvoker，这个是一个特殊wrapper而已
+     *
      * @param invocation
      * @param invokers
      * @param loadbalance
@@ -314,7 +338,9 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                                        LoadBalance loadbalance) throws RpcException;
 
     /**
-     * 显示invocation对应的invoker列表，由目录服务支持
+     *
+     * 使用目录服务为本次invocation筛选符合的invoker列表
+     *
      * @param invocation
      * @return
      * @throws RpcException

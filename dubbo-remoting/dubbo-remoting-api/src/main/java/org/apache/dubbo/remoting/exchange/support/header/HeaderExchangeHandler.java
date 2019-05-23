@@ -198,9 +198,17 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         }
     }
 
+    /**
+     * 已经全部的解码的消息处理
+     * @param channel channel.
+     * @param message message.
+     * @throws RemotingException
+     */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        //设置读取时间
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
+        //获得channel对应的写的网络端，处理消息后要进行写
         final ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
             // 处理请求对象

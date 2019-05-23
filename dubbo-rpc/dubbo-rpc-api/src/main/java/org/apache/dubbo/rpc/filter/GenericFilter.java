@@ -85,8 +85,7 @@ public class GenericFilter implements Filter {
                 }
 
                 //默认的策略，使用pojo来
-                if (StringUtils.isEmpty(generic)
-                        || ProtocolUtils.isDefaultGenericSerialization(generic)) {
+                if (StringUtils.isEmpty(generic) || ProtocolUtils.isDefaultGenericSerialization(generic)) {
                     args = PojoUtils.realize(args, params, method.getGenericParameterTypes());
                 } else if (ProtocolUtils.isJavaGenericSerialization(generic)) { //java序列化
                     for (int i = 0; i < args.length; i++) {
@@ -125,8 +124,7 @@ public class GenericFilter implements Filter {
                 }
                 //构建
                 Result result = invoker.invoke(new RpcInvocation(method, args, inv.getAttachments()));
-                if (result.hasException()
-                        && !(result.getException() instanceof GenericException)) {
+                if (result.hasException() && !(result.getException() instanceof GenericException)) {
                     return new RpcResult(new GenericException(result.getException()));
                 }
                 //写入Result中
@@ -135,7 +133,8 @@ public class GenericFilter implements Filter {
                         UnsafeByteArrayOutputStream os = new UnsafeByteArrayOutputStream(512);
                         ExtensionLoader.getExtensionLoader(Serialization.class)
                                 .getExtension(Constants.GENERIC_SERIALIZATION_NATIVE_JAVA)
-                                .serialize(null, os).writeObject(result.getValue());
+                                .serialize(null, os)
+                                .writeObject(result.getValue());
                         return new RpcResult(os.toByteArray());
                     } catch (IOException e) {
                         throw new RpcException("Serialize result failed.", e);

@@ -32,8 +32,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RpcStatus {
 
+    /**
+     * 统计，接口url，状态
+     */
     private static final ConcurrentMap<String, RpcStatus> SERVICE_STATISTICS = new ConcurrentHashMap<String, RpcStatus>();
 
+    /**
+     * 统计，接口url，接口方法名，状态
+     */
     private static final ConcurrentMap<String, ConcurrentMap<String, RpcStatus>> METHOD_STATISTICS = new ConcurrentHashMap<String, ConcurrentMap<String, RpcStatus>>();
     private final ConcurrentMap<String, Object> values = new ConcurrentHashMap<String, Object>();
     private final AtomicInteger active = new AtomicInteger();
@@ -49,6 +55,7 @@ public class RpcStatus {
     }
 
     /**
+     * 获得接口级状态，不存在新增
      * @param url
      * @return status
      */
@@ -110,12 +117,17 @@ public class RpcStatus {
      */
     public static boolean beginCount(URL url, String methodName, int max) {
         max = (max <= 0) ? Integer.MAX_VALUE : max;
+        //接口级状态
         RpcStatus appStatus = getStatus(url);
+        //方法级状态
         RpcStatus methodStatus = getStatus(url, methodName);
+        //方法级active++
         if (methodStatus.active.incrementAndGet() > max) {
+            //最大就--
             methodStatus.active.decrementAndGet();
             return false;
         } else {
+            //++
             appStatus.active.incrementAndGet();
             return true;
         }

@@ -61,36 +61,53 @@ public class StubProxyFactoryWrapper implements ProxyFactory {
         return proxyFactory.getProxy(invoker, generic);
     }
 
+    /**
+     * 获得代理
+     * 当消费引用暴露后，获得是一个代理，这里是最早的获得代理的调用处
+     * 获得代理后，尝试对mock服务进行一次暴露，如果有的话。
+     *
+     * @param invoker rpc Invoker
+     * @param <T>     类型
+     * @return 代理
+     * @throws RpcException rpc异常
+     */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> T getProxy(Invoker<T> invoker) throws RpcException {
-        T proxy = proxyFactory.getProxy(invoker);
-        if (GenericService.class != invoker.getInterface()) {
+        T proxy = proxyFactory.getProxy(invoker); //构建实例
+        if (GenericService.class != invoker.getInterface()) { //不是泛化调用
             URL url = invoker.getUrl();
+            //寻找mock服务，优先使用stub，stub等价于local
             String stub = url.getParameter(Constants.STUB_KEY, url.getParameter(Constants.LOCAL_KEY));
             if (ConfigUtils.isNotEmpty(stub)) {
                 Class<?> serviceType = invoker.getInterface();
-                if (ConfigUtils.isDefault(stub)) {
+                if (ConfigUtils.isDefault(stub)) { //默认策略
+                    //mock服务类
                     if (url.hasParameter(Constants.STUB_KEY)) {
                         stub = serviceType.getName() + "Stub";
                     } else {
+                        //mock服务类
                         stub = serviceType.getName() + "Local";
                     }
                 }
                 try {
+                    //检查mock服务类
                     Class<?> stubClass = ReflectUtils.forName(stub);
                     if (!serviceType.isAssignableFrom(stubClass)) {
                         throw new IllegalStateException("The stub implementation class " + stubClass.getName() + " not implement interface " + serviceType.getName());
                     }
                     try {
+                        //完成mock服务的暴露
                         Constructor<?> constructor = ReflectUtils.findConstructor(stubClass, serviceType);
                         proxy = (T) constructor.newInstance(new Object[]{proxy});
                         //export stub service
                         URLBuilder urlBuilder = URLBuilder.from(url);
-                        if (url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT)) {
+                        if (url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT)) { //dubbo.stub.event
+                            //dubbo.stub.event.methods
                             urlBuilder.addParameter(Constants.STUB_EVENT_METHODS_KEY, StringUtils.join(Wrapper.getWrapper(proxy.getClass()).getDeclaredMethodNames(), ","));
                             urlBuilder.addParameter(Constants.IS_SERVER_KEY, Boolean.FALSE.toString());
                             try {
+                                //暴露服务
                                 export(proxy, (Class) invoker.getInterface(), urlBuilder.build());
                             } catch (Exception e) {
                                 LOGGER.error("export a stub service error.", e);

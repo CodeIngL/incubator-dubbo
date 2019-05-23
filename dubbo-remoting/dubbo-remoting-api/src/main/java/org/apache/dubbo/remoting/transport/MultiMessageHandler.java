@@ -31,6 +31,13 @@ public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
         super(handler);
     }
 
+    /**
+     * 多个消息，则循环调用后续处理，
+     * 否则直接调用
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @SuppressWarnings("unchecked")
     @Override
     public void received(Channel channel, Object message) throws RemotingException {

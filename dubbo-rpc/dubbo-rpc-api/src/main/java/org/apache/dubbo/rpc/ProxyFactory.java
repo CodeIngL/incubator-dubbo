@@ -29,6 +29,10 @@ public interface ProxyFactory {
 
     /**
      * create proxy.
+     * 构建一个代理，为一个Invoker构建一个代理，
+     * 其中代理应该事先由Invoker指定接口，
+     * 并且最终的代理调用方法将回调Invoker的方法
+     *
      *
      * @param invoker
      * @return proxy

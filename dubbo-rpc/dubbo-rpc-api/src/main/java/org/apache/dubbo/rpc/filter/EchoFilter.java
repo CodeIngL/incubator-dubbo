@@ -27,16 +27,20 @@ import org.apache.dubbo.rpc.RpcResult;
 
 /**
  * Dubbo provided default Echo echo service, which is available for all dubbo provider service interface.
+ * <p>
+ *     Dubbo提供默认的Echo echo服务，可用于所有dubbo提供商服务接口。
+ *     回声测试的关键实现，服务端提供
  */
 @Activate(group = Constants.PROVIDER, order = -110000)
 public class EchoFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
-        //调用的方法名是$echo
+        //调用的方法名是$echo，也就是回声测试，所以我们之间返回
         if (inv.getMethodName().equals(Constants.$ECHO) && inv.getArguments() != null && inv.getArguments().length == 1) {
             return new RpcResult(inv.getArguments()[0]);
         }
+        //否则放行
         return invoker.invoke(inv);
     }
 

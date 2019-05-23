@@ -109,8 +109,7 @@ public class RestProtocol extends AbstractProxyProtocol {
             if (StringUtils.isNotEmpty(webappPath)) {
                 webappPath = webappPath.substring(1);
                 if (!contextPath.startsWith(webappPath)) {
-                    throw new RpcException("Since you are using server='servlet', " +
-                            "make sure that the 'contextpath' property starts with the path of external webapp");
+                    throw new RpcException("Since you are using server='servlet', make sure that the 'contextpath' property starts with the path of external webapp");
                 }
                 contextPath = contextPath.substring(webappPath.length());
                 if (contextPath.startsWith("/")) {

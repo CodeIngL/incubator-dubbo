@@ -76,9 +76,9 @@ public class InvokerInvocationHandler implements InvocationHandler {
      */
     private RpcInvocation createInvocation(Method method, Object[] args) {
         RpcInvocation invocation = new RpcInvocation(method, args);
-        if (RpcUtils.hasFutureReturnType(method)) { //方法返回值是CompletableFuture类型
-            invocation.setAttachment(Constants.FUTURE_RETURNTYPE_KEY, "true");
-            invocation.setAttachment(Constants.ASYNC_KEY, "true");
+        if (RpcUtils.hasFutureReturnType(method)) { //支持方法返回类型是{@link CompletableFuture}，向附件中添加相应的kv用以说明
+            invocation.setAttachment(Constants.FUTURE_RETURNTYPE_KEY, Boolean.TRUE.toString());
+            invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
         return invocation;
     }

@@ -38,7 +38,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.dubbo.rpc.protocol.dubbo.CallbackServiceCodec.decodeInvocationArgument;
-
+/**
+ * <p>
+ *     可解码的RpcInvocation
+ *     主要是提供了相关的数据字段的解码
+ * </p>
+ */
 public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Decodeable {
 
     private static final Logger log = LoggerFactory.getLogger(DecodeableRpcInvocation.class);

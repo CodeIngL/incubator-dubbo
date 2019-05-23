@@ -95,6 +95,7 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
      */
     @Override
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
+        //空的直接返回空的
         if (CollectionUtils.isEmpty(invokers)) {
             return invokers;
         }
@@ -113,7 +114,7 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
         // if we are requesting for a Provider with a specific tag
         // 如果我们要求具有特定标签的提供商
         if (StringUtils.isNotEmpty(tag)) {
-            //地址
+            // 地址
             List<String> addresses = tagRouterRuleCopy.getTagnameToAddresses().get(tag);
             // filter by dynamic tag group first
             if (CollectionUtils.isNotEmpty(addresses)) {
@@ -180,7 +181,7 @@ public class TagRouter extends AbstractRouter implements ConfigurationListener {
     private <T> List<Invoker<T>> filterUsingStaticTag(List<Invoker<T>> invokers, URL url, Invocation invocation) {
         List<Invoker<T>> result = invokers;
         // Dynamic param
-        //调用者的动态参数，或者使用url中匹配的
+        // 调用者的动态参数，或者使用url中匹配的
         String tag = StringUtils.isEmpty(invocation.getAttachment(TAG_KEY)) ? url.getParameter(TAG_KEY) :
                 invocation.getAttachment(TAG_KEY);
         // Tag request

@@ -88,7 +88,9 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
     }
 
     protected static ChannelHandler wrapChannelHandler(URL url, ChannelHandler handler) {
+        //设置线程名DubboClientHandler
         url = ExecutorUtil.setThreadName(url, CLIENT_THREAD_POOL_NAME);
+        //threadPool类型cached
         url = url.addParameterIfAbsent(Constants.THREADPOOL_KEY, Constants.DEFAULT_CLIENT_THREADPOOL);
         return ChannelHandlers.wrap(handler, url);
     }
@@ -165,7 +167,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         if (needReconnect && !isConnected()) {
             connect();
         }
-        // 获取 Channel，getChannel 是一个抽象方法，具体由子类实现
+        // 获取Channel，具体由子类实现
         Channel channel = getChannel();
         //TODO Can the value returned by getChannel() be null? need improvement.
         if (channel == null || !channel.isConnected()) {

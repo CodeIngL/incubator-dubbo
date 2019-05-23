@@ -166,6 +166,17 @@ public class RegistryProtocol implements Protocol {
         registry.unregister(registeredProviderUrl);
     }
 
+    /**
+     * <p>
+     * 使用注册中心进行的暴露，除了暴露本地服务外还需要建立与注册中心的关系。
+     * </p>
+     *
+     * @param originInvoker 默认情况下是AbstractProxyInvoker
+     * @param <T>
+     * @return
+     * @throws RpcException rpc异常
+     * @see #doLocalExport(Invoker,URL)
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         // 获取注册中心 URL，以 zookeeper 注册中心为例，得到的示例 URL 如下：
@@ -173,8 +184,9 @@ public class RegistryProtocol implements Protocol {
         // url to export locally
         URL providerUrl = getProviderUrl(originInvoker);
 
-        // Subscribe the override data
+        // 订阅override数据
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call
+        // FIXME 提供者订阅时，会影响同一JVM即暴露服务，又引用同一服务的的场景，因为subscribed以服务名为缓存的key，导致订阅信息覆盖。
         //  the same service. Because the subscribed is cached key with the name of the service, it causes the
         //  subscription information to cover.
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(providerUrl);
@@ -402,6 +414,7 @@ public class RegistryProtocol implements Protocol {
             //注册相关的订阅地址
             registry.register(directory.getRegisteredConsumerUrl());
         }
+        //构建路由链
         directory.buildRouterChain(subscribeUrl);
         //订阅
         directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY,

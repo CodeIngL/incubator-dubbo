@@ -38,11 +38,11 @@ import java.net.InetSocketAddress;
  * Wrap the existing invoker on the channel.
  * <p>
  *     将现有的调用程序包装在channel上。
- * </p>
  */
 class ChannelWrappedInvoker<T> extends AbstractInvoker<T> {
 
     private final Channel channel;
+    //回调客户端的实例id
     private final String serviceKey;
     private final ExchangeClient currentClient;
 
@@ -53,19 +53,29 @@ class ChannelWrappedInvoker<T> extends AbstractInvoker<T> {
         this.currentClient = new HeaderExchangeClient(new ChannelWrapper(this.channel), false);
     }
 
+    /**
+     * 调用
+     * @param invocation
+     * @return
+     * @throws Throwable
+     */
     @Override
     protected Result doInvoke(Invocation invocation) throws Throwable {
         RpcInvocation inv = (RpcInvocation) invocation;
         // use interface's name as service path to export if it's not found on client side
+        // 如果在客户端找不到，则使用interface的名称作为导出的服务路径
         inv.setAttachment(Constants.PATH_KEY, getInterface().getName());
+        //实例id，回调回去哪个实例的id
         inv.setAttachment(Constants.CALLBACK_SERVICE_KEY, serviceKey);
 
+        String methodName = invocation.getMethodName();
         try {
-            if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) { // may have concurrency issue
-                currentClient.send(inv, getUrl().getMethodParameter(invocation.getMethodName(), Constants.SENT_KEY, false));
+            if (getUrl().getMethodParameter(methodName, Constants.ASYNC_KEY, false)) { // may have concurrency issue
+                currentClient.send(inv, getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false));
                 return new RpcResult();
             }
-            int timeout = getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
+            //超时时间
+            int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
             if (timeout > 0) {
                 return (Result) currentClient.request(inv, timeout).get();
             } else {
@@ -84,12 +94,6 @@ class ChannelWrappedInvoker<T> extends AbstractInvoker<T> {
 
     @Override
     public void destroy() {
-//        super.destroy();
-//        try {
-//            channel.close();
-//        } catch (Throwable t) {
-//            logger.warn(t.getMessage(), t);
-//        }
     }
 
     public static class ChannelWrapper extends ClientDelegate {

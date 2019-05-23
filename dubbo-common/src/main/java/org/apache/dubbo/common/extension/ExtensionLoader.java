@@ -317,9 +317,12 @@ public class ExtensionLoader<T> {
     /**
      * Get activate extensions.
      *
+     * <p>
+     *     获取激活的扩展
+     * </p>
      * @param url    url
-     * @param values extension point names
-     * @param group  group
+     * @param values extension point names 扩展名
+     * @param group  group 所在组
      * @return extension list which are activated
      * @see org.apache.dubbo.common.extension.Activate
      */
@@ -327,33 +330,34 @@ public class ExtensionLoader<T> {
         List<T> exts = new ArrayList<>();
         List<String> names = values == null ? new ArrayList<>(0) : Arrays.asList(values);
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
-            getExtensionClasses();
-            for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) {
-                String name = entry.getKey();
-                Object activate = entry.getValue();
+            getExtensionClasses(); //先尝试加载所有的扩展
+            for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) { //遍历缓存的扩展
+                String name = entry.getKey(); //名字
+                Object activate = entry.getValue(); //值Activate
 
-                String[] activateGroup, activateValue;
+                String[] activateGroup, activateValue; //注解Activate上的参数
 
                 if (activate instanceof Activate) {
-                    activateGroup = ((Activate) activate).group();
-                    activateValue = ((Activate) activate).value();
+                    activateGroup = ((Activate) activate).group(); //组
+                    activateValue = ((Activate) activate).value(); //值
                 } else if (activate instanceof com.alibaba.dubbo.common.extension.Activate) {
                     activateGroup = ((com.alibaba.dubbo.common.extension.Activate) activate).group();
                     activateValue = ((com.alibaba.dubbo.common.extension.Activate) activate).value();
                 } else {
                     continue;
                 }
-                if (isMatchGroup(group, activateGroup)) {
-                    T ext = getExtension(name);
+                if (isMatchGroup(group, activateGroup)) { //匹配组
+                    T ext = getExtension(name); //获得扩展
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activateValue, url)) {
-                        exts.add(ext);
+                        exts.add(ext); //加入
                     }
                 }
             }
             exts.sort(ActivateComparator.COMPARATOR);
         }
+        //用户自己定义的扩展
         List<T> usrs = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
             String name = names.get(i);

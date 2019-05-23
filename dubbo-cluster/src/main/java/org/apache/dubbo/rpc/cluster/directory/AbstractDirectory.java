@@ -34,7 +34,6 @@ import java.util.Map;
 
 /**
  * Abstract implementation of Directory: Invoker list returned from this Directory's list method have been filtered by Routers
- *
  */
 public abstract class AbstractDirectory<T> implements Directory<T> {
 
@@ -49,6 +48,8 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     //再一个目录服务构造的时候应该完成，或者第一次构建的试试应该要完成的。
     protected RouterChain<T> routerChain;
+
+    //---------------------------构造函数------------------------------
 
     public AbstractDirectory(URL url) {
         this(url, null);
@@ -74,12 +75,19 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
         setRouterChain(routerChain);
     }
 
+    /**
+     * 展现本次invocation涉及到的相关invoker列表
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public List<Invoker<T>> list(Invocation invocation) throws RpcException {
         if (destroyed) {
             throw new RpcException("Directory already destroyed .url: " + getUrl());
         }
-
+        //回调目录服务子类实现
         return doList(invocation);
     }
 
@@ -97,8 +105,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
     }
 
     protected void addRouters(List<Router> routers) {
-        routers = routers == null ? Collections.emptyList() : routers;
-        routerChain.addRouters(routers);
+        routerChain.addRouters(routers == null ? Collections.emptyList() : routers);
     }
 
     public URL getConsumerUrl() {
@@ -118,6 +125,13 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
         destroyed = true;
     }
 
+    /**
+     * 子类实现，根据本次Invacation来展现对应的invoker列表
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     protected abstract List<Invoker<T>> doList(Invocation invocation) throws RpcException;
 
 }

@@ -37,6 +37,12 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
         super(handler);
     }
 
+    /**
+     * 用于解码消息体，消息体可以延迟到最后解码，在不同的线程解码，或者在io线程中解码
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         if (message instanceof Decodeable) {

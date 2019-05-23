@@ -26,6 +26,9 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DefaultTPSLimiter is a default implementation for tps filter. It is an in memory based implementation for storing
  * tps information. It internally use
+ * <p>
+ *     DefaultTPSLimiter是tps过滤器的默认实现。 它是一种基于内存的实现，用于存储tps信息。 它在内部使用
+ * </p>
  *
  * @see org.apache.dubbo.rpc.filter.TpsLimitFilter
  */

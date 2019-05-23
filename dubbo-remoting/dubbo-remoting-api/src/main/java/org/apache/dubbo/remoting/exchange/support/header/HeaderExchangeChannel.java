@@ -74,21 +74,32 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         }
     }
 
+    /**
+     * 使用信息交互层发送消息
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message) throws RemotingException {
         send(message, false);
     }
 
+    /**
+     * 使用信息交互层发送消息
+     * @param message
+     * @param sent    already sent to socket?
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send message " + message + ", cause: The channel " + this + " is closed!");
         }
-        if (message instanceof Request
-                || message instanceof Response
-                || message instanceof String) {
-            channel.send(message, sent);
+        //消息对象是 Request| Response | String
+        if (message instanceof Request || message instanceof Response || message instanceof String) {
+            channel.send(message, sent); //通过网络层进行发送
         } else {
+            //单向发送
             Request request = new Request();
             request.setVersion(Version.getProtocolVersion());
             request.setTwoWay(false);
@@ -114,24 +125,20 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send request " + request + ", cause: The channel " + this + " is closed!");
         }
-        // 创建 Request 对象
+        // 创建Request，设置双向通信标记，请求数据request=>RpcInvocation
         Request req = new Request();
         req.setVersion(Version.getProtocolVersion());
-        // 设置双向通信标志为 true
         req.setTwoWay(true);
-        // 这里的 request 变量类型为 RpcInvocation
         req.setData(request);
 
-        // 创建 DefaultFuture 对象，用于异步
+        //构建DefaultFuture，配合javaFuture实现异步
         DefaultFuture future = DefaultFuture.newFuture(channel, req, timeout);
         try {
-            // 调用 NettyClient 的 send 方法发送请求
-            channel.send(req);
+            channel.send(req);// 调用 NettyClient 的 send 方法发送请求
         } catch (RemotingException e) {
             future.cancel();
             throw e;
         }
-        // 返回 DefaultFuture 对象
         return future;
     }
 

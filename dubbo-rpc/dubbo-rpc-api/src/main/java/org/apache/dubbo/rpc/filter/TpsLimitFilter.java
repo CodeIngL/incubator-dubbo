@@ -33,6 +33,10 @@ import org.apache.dubbo.rpc.filter.tps.TPSLimiter;
  * as it limit checker. If a provider service method is configured with <b>tps</b>(optionally with <b>tps.interval</b>),then
  * if invocation count exceed the configured <b>tps</b> value (default is -1 which means unlimited) then invocation will get
  * RpcException.
+ * <p>
+ *     TpsLimitFilter限制服务或特定方法的所有方法的TPS（每秒事务数）。 服务或方法url可以定义tps或tps.interval来控制此控件。它使用DefaultTPSLimiter作为限制检查器。
+ *     如果使用tps（可选地使用tps.interval）配置了提供者服务方法，那么如果调用计数超过配置的tps值（默认值为-1，这意味着无限制），则调用将获得RpcException
+ * </p>
  * */
 @Activate(group = Constants.PROVIDER, value = Constants.TPS_LIMIT_RATE_KEY)
 public class TpsLimitFilter implements Filter {

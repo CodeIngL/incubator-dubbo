@@ -51,19 +51,25 @@ public class FutureFilter implements Filter {
 
     @Override
     public Result onResponse(Result result, Invoker<?> invoker, Invocation invocation) {
-        if (result instanceof AsyncRpcResult) {
+        if (result instanceof AsyncRpcResult) { //异步
             AsyncRpcResult asyncResult = (AsyncRpcResult) result;
             asyncResult.thenApplyWithContext(r -> {
                 asyncCallback(invoker, invocation, r);
                 return r;
             });
             return asyncResult;
-        } else {
+        } else { //同步
             syncCallback(invoker, invocation, result);
             return result;
         }
     }
 
+    /**
+     * 同步回调
+     * @param invoker
+     * @param invocation
+     * @param result
+     */
     private void syncCallback(final Invoker<?> invoker, final Invocation invocation, final Result result) {
         if (result.hasException()) {
             fireThrowCallback(invoker, invocation, result.getException());
@@ -72,6 +78,12 @@ public class FutureFilter implements Filter {
         }
     }
 
+    /**
+     * 异步回调
+     * @param invoker
+     * @param invocation
+     * @param result
+     */
     private void asyncCallback(final Invoker<?> invoker, final Invocation invocation, Result result) {
         if (result.hasException()) {
             fireThrowCallback(invoker, invocation, result.getException());
@@ -80,7 +92,13 @@ public class FutureFilter implements Filter {
         }
     }
 
+    /**
+     * 触发一个Invoker的回调
+     * @param invoker
+     * @param invocation
+     */
     private void fireInvokeCallback(final Invoker<?> invoker, final Invocation invocation) {
+        //获得异步信息，没有不管他了
         final ConsumerMethodModel.AsyncMethodInfo asyncMethodInfo = getAsyncMethodInfo(invoker, invocation);
         if (asyncMethodInfo == null) {
             return;
@@ -98,16 +116,27 @@ public class FutureFilter implements Filter {
             onInvokeMethod.setAccessible(true);
         }
 
+        //参数
         Object[] params = invocation.getArguments();
         try {
+            //回调
             onInvokeMethod.invoke(onInvokeInst, params);
         } catch (InvocationTargetException e) {
+            //回调
             fireThrowCallback(invoker, invocation, e.getTargetException());
         } catch (Throwable e) {
+            //回调
             fireThrowCallback(invoker, invocation, e);
         }
     }
 
+
+    /**
+     * 触发ReturnCallback
+     * @param invoker
+     * @param invocation
+     * @param result
+     */
     private void fireReturnCallback(final Invoker<?> invoker, final Invocation invocation, final Object result) {
         final ConsumerMethodModel.AsyncMethodInfo asyncMethodInfo = getAsyncMethodInfo(invoker, invocation);
         if (asyncMethodInfo == null) {
@@ -154,6 +183,12 @@ public class FutureFilter implements Filter {
         }
     }
 
+    /**
+     * 触发ThrowCallBack
+     * @param invoker
+     * @param invocation
+     * @param exception
+     */
     private void fireThrowCallback(final Invoker<?> invoker, final Invocation invocation, final Throwable exception) {
         final ConsumerMethodModel.AsyncMethodInfo asyncMethodInfo = getAsyncMethodInfo(invoker, invocation);
         if (asyncMethodInfo == null) {

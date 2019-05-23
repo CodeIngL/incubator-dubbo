@@ -41,9 +41,17 @@ import java.lang.reflect.Type;
  *    local jvm then POJO conversion.
  *    3)If return value is other than above return value as it is.
  * </pre>
+ * <p>
+ * 兼容的过滤器使远程方法返回值与调用者的对象版本兼容。 为了使返回对象兼容，它确实如此
+ * </p>
+ * <pre>
+ *   * 1）如果url包含<b> json </ b>或<b> fastjson </ b>类型的序列化key，则转换
+ *   * {@link java.util.Map}实例的返回值
+ *   * 2）如果返回值不是调用方法的返回类型的实例，则可以使用本地jvm然后POJO转换。
+ *   * 3）如果返回值不是上述返回值直接返回
+ * </ pre>
  *
  * @see Filter
- *
  */
 public class CompatibleFilter implements Filter {
 

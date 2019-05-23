@@ -446,6 +446,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      * 3. otherwise, check scope parameter
      * 4. if scope is not specified but the target service is provided in the same JVM, then prefer to make the local
      * call, which is the default behavior
+     * <p>
+     * 弄清楚应该从配置中引用同一JVM中的服务。 默认行为为true
+     * 1.如果指定了injvm，则使用它
+     * 2.然后如果指定了url，则假设它是远程调用
+     * 3.否则，检查范围参数
+     * 4.如果未指定范围但提供了目标服务 在同一个JVM中，然后更喜欢进行本地调用，这是默认行为
      */
     protected boolean shouldJvmRefer(Map<String, String> map) {
         URL tmpUrl = new URL("temp", "localhost", 0, map);
@@ -466,7 +472,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
     protected boolean shouldCheck() {
         Boolean shouldCheck = isCheck();
-        if (shouldCheck == null && getConsumer()!= null) {
+        if (shouldCheck == null && getConsumer() != null) {
             shouldCheck = getConsumer().isCheck();
         }
         if (shouldCheck == null) {
@@ -497,18 +503,19 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             return;
         }
         setConsumer(
-                        ConfigManager.getInstance()
-                            .getDefaultConsumer()
-                            .orElseGet(() -> {
-                                ConsumerConfig consumerConfig = new ConsumerConfig();
-                                consumerConfig.refresh();
-                                return consumerConfig;
-                            })
-                );
+                ConfigManager.getInstance()
+                        .getDefaultConsumer()
+                        .orElseGet(() -> {
+                            ConsumerConfig consumerConfig = new ConsumerConfig();
+                            consumerConfig.refresh();
+                            return consumerConfig;
+                        })
+        );
     }
 
     /**
      * 值不存在时，从候选的配置中尝试导出值
+     *
      * @see ServiceConfig#completeCompoundConfigs()
      */
     private void completeCompoundConfigs() {

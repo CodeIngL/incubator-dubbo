@@ -79,7 +79,7 @@ public class ExchangeCodec extends TelnetCodec {
 
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
-        int readable = buffer.readableBytes();
+        int readable = buffer.readableBytes(); //可读字节数
         // 创建消息头字节数组
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
         // 读取消息头数据
@@ -102,15 +102,16 @@ public class ExchangeCodec extends TelnetCodec {
         // 检查魔数
         if (readable > 0 && header[0] != MAGIC_HIGH
                 || readable > 1 && header[1] != MAGIC_LOW) {
-            int length = header.length;
-            if (header.length < readable) {
+            //不是dubbo协议包，魔数不一致
+            int length = header.length; //获得头部
+            if (header.length < readable) { //小于全copy，确定是其他的包了
                 header = Bytes.copyOf(header, readable);
-                buffer.readBytes(header, length, readable - length);
+                buffer.readBytes(header, length, readable - length);//读完
             }
-            for (int i = 1; i < header.length - 1; i++) {
+            for (int i = 1; i < header.length - 1; i++) { //混合包，在确定一些有没有dubbo包
                 if (header[i] == MAGIC_HIGH && header[i + 1] == MAGIC_LOW) {
                     buffer.readerIndex(buffer.readerIndex() - header.length + i);
-                    header = Bytes.copyOf(header, i);
+                    header = Bytes.copyOf(header, i); //有的话，读到dubbo前面
                     break;
                 }
             }

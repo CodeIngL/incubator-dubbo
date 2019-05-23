@@ -58,6 +58,18 @@ import java.util.concurrent.TimeUnit;
  *    &lt;appender-ref ref="foo" /&gt;
  * &lt;/logger&gt;
  * </pre></code>
+ * <p>
+ *     记录服务的访问日志。
+ * </p>
+ * <p>
+ * 记录器密钥是dubbo.accesslog。 为了配置访问日志仅出现在指定的appender中，需要在log4j的配置文件中配置可加性，例如：
+ * </p>
+ * <pre>
+ * &lt;logger name="<b>dubbo.accesslog</b>" <font color="red">additivity="false"</font>&gt;
+ *    &lt;level value="info" /&gt;
+ *    &lt;appender-ref ref="foo" /&gt;
+ * &lt;/logger&gt;
+ * </pre></code>
  */
 @Activate(group = Constants.PROVIDER, value = Constants.ACCESS_LOG_KEY)
 public class AccessLogFilter implements Filter {

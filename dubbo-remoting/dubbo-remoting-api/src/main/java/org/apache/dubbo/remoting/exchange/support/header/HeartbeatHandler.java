@@ -18,6 +18,7 @@
 package org.apache.dubbo.remoting.exchange.support.header;
 
 import org.apache.dubbo.common.Constants;
+import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.remoting.Channel;
@@ -62,12 +63,18 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
         handler.sent(channel, message);
     }
 
+    /**
+     * 心跳处理，如果是心跳消息
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         setReadTimestamp(channel);
         if (isHeartbeatRequest(message)) {//如果是心跳请求
             Request req = (Request) message;
-            if (req.isTwoWay()) {
+            if (req.isTwoWay()) { //twoway方式，需要返回心跳响应
                 Response res = new Response(req.getId(), req.getVersion());
                 res.setEvent(Response.HEARTBEAT_EVENT);
                 channel.send(res);
@@ -82,12 +89,16 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             }
             return;
         }
-        if (isHeartbeatResponse(message)) {//如果是心跳响应
+        if (isHeartbeatResponse(message)) {//如果是心跳响应，接收到心跳了，不需要操作
             if (logger.isDebugEnabled()) {
                 logger.debug("Receive heartbeat response in thread " + Thread.currentThread().getName());
             }
             return;
         }
+        /**
+         * 其他消息，继续后续处理，由分发模型确定，后面的处理是如何的
+         * @see org.apache.dubbo.remoting.Dispatcher#dispatch(ChannelHandler, URL)
+         */
         handler.received(channel, message);
     }
 
@@ -107,10 +118,20 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
         channel.removeAttribute(KEY_WRITE_TIMESTAMP);
     }
 
+    /**
+     * 是否是心跳请求包
+     * @param message
+     * @return
+     */
     private boolean isHeartbeatRequest(Object message) {
         return message instanceof Request && ((Request) message).isHeartbeat();
     }
 
+    /**
+     * 是否是心跳响应包
+     * @param message
+     * @return
+     */
     private boolean isHeartbeatResponse(Object message) {
         return message instanceof Response && ((Response) message).isHeartbeat();
     }

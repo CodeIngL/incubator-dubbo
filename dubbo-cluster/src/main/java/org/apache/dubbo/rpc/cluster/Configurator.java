@@ -63,6 +63,16 @@ public interface Configurator extends Comparable<Configurator> {
      * <li>override://0.0.0.0/ without parameters means clearing the override</li>
      * </ol>
      *
+     * <p>
+     * 将overrideURL转换为map，供重新refer时使用.
+     * 每次下发全部规则，全部重新组装计算
+     * <p>
+     * 入参urls的契约：
+     * 1.override://0.0.0.0/...(或override://ip:port...?anyhost=true)&para1=value1...表示全局规则(对所有的提供者全部生效)<br/>
+     * 2.override://ip:port...?anyhost=false 特例规则（只针对某个提供者生效<br>
+     * 3.不支持override://规则... 需要注册中心自行计算.<br/>
+     * 4.不带参数的override://0.0.0.0/ 表示清除override<br/>
+     *
      * @param urls URL list to convert
      * @return converted configurator list
      */
@@ -71,12 +81,12 @@ public interface Configurator extends Comparable<Configurator> {
             return Optional.empty();
         }
 
-        ConfiguratorFactory configuratorFactory = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
+        ConfiguratorFactory factory = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                 .getAdaptiveExtension();
 
         List<Configurator> configurators = new ArrayList<>(urls.size());
         for (URL url : urls) {
-            //协议是空的，清楚全部
+            //协议是空的，清除全部
             if (Constants.EMPTY_PROTOCOL.equals(url.getProtocol())) {
                 configurators.clear();
                 break;
@@ -84,6 +94,7 @@ public interface Configurator extends Comparable<Configurator> {
             //要覆盖的值
             Map<String, String> override = new HashMap<>(url.getParameters());
             //The anyhost parameter of override may be added automatically, it can't change the judgement of changing url
+            //覆盖的anyhost参数可以自动添加，也不能改变更改url的判断
             override.remove(Constants.ANYHOST_KEY);
             //空的，不需要进行应用
             if (override.size() == 0) {
@@ -91,7 +102,7 @@ public interface Configurator extends Comparable<Configurator> {
                 continue;
             }
             //根据url读取特定的实现
-            configurators.add(configuratorFactory.getConfigurator(url));
+            configurators.add(factory.getConfigurator(url));
         }
         Collections.sort(configurators);
         return Optional.of(configurators);

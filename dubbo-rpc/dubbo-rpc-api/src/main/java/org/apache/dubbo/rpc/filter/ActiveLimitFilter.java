@@ -35,6 +35,15 @@ import org.apache.dubbo.rpc.RpcStatus;
  *      If there are more than configured (in this example 2) is trying to invoke remote method, then rest of invocation
  *      will wait for configured timeout(default is 0 second) before invocation gets kill by dubbo.
  * </pre>
+ * <p>
+ *     ActiveLimitFilter限制客户端的服务或服务方法的并发客户端调用。 要使用active limit filter，请使用<b>actives</b>已配置URL并提供有效的> 0整数值。
+ * </p>
+ * <pre>
+ *     e.g. <dubbo:reference id="demoService" check="false" interface="org.apache.dubbo.demo.DemoService" "actives"="2"/>
+ *      In the above example maximum 2 concurrent invocation is allowed.
+ *      If there are more than configured (in this example 2) is trying to invoke remote method, then rest of invocation
+ *      will wait for configured timeout(default is 0 second) before invocation gets kill by dubbo.
+ * </pre>
  *
  * @see Filter
  */
@@ -43,22 +52,29 @@ public class ActiveLimitFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        //url
         URL url = invoker.getUrl();
+        //方法名
         String methodName = invocation.getMethodName();
+        //最大并发量
         int max = invoker.getUrl().getMethodParameter(methodName, Constants.ACTIVES_KEY, 0);
+        //获得状态
         RpcStatus count = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName());
         if (!count.beginCount(url, methodName, max)) {
+            //失败了
+            //超时时间
             long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, 0);
             long start = System.currentTimeMillis();
             long remain = timeout;
             synchronized (count) {
-                while (!count.beginCount(url, methodName, max)) {
+                while (!count.beginCount(url, methodName, max)) { //不断尝试
                     try {
                         count.wait(remain);
                     } catch (InterruptedException e) {
                         // ignore
                     }
                     long elapsed = System.currentTimeMillis() - start;
+                    //超时了就认出异常
                     remain = timeout - elapsed;
                     if (remain <= 0) {
                         throw new RpcException("Waiting concurrent invoke timeout in client-side for service:  "
@@ -71,6 +87,7 @@ public class ActiveLimitFilter implements Filter {
             }
         }
 
+        //成功了
         boolean isSuccess = true;
         long begin = System.currentTimeMillis();
         try {
@@ -79,9 +96,10 @@ public class ActiveLimitFilter implements Filter {
             isSuccess = false;
             throw t;
         } finally {
+            //解释本次统计
             count.endCount(url, methodName, System.currentTimeMillis() - begin, isSuccess);
             if (max > 0) {
-                synchronized (count) {
+                synchronized (count) { //通知等待复苏
                     count.notifyAll();
                 }
             }

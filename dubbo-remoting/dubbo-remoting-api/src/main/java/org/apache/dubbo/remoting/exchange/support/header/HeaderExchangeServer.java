@@ -44,6 +44,7 @@ import static java.util.Collections.unmodifiableCollection;
 
 /**
  * ExchangeServerImpl
+ * 基于头部的信息交互
  */
 public class HeaderExchangeServer implements ExchangeServer {
 

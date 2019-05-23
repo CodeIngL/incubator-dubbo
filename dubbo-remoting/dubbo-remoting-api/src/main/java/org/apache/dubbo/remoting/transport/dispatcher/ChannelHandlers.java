@@ -23,6 +23,10 @@ import org.apache.dubbo.remoting.Dispatcher;
 import org.apache.dubbo.remoting.exchange.support.header.HeartbeatHandler;
 import org.apache.dubbo.remoting.transport.MultiMessageHandler;
 
+/**
+ * ChannelHandlers
+ * 工具类,使用ChannelHandlers构建出支持transport的ChannelHandler
+ */
 public class ChannelHandlers {
 
     private static ChannelHandlers INSTANCE = new ChannelHandlers();
@@ -43,7 +47,9 @@ public class ChannelHandlers {
     }
 
     /**
-     * 总是会被包装一下
+     * 总是会被包装一下，多消息处理器支持，心跳支持，使用分发模型进行分发
+     * 为handler增强支持transport的channelHandler
+     * 包括支持多消息，支持心跳，心跳之后使用特使的分发模型来触发被包装的handler
      * @param handler
      * @param url
      * @return

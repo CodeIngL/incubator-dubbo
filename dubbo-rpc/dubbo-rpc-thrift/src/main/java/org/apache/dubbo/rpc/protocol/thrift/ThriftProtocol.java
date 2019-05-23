@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 /**
  * @since 2.7.0, use https://github.com/dubbo/dubbo-rpc-native-thrift instead
  */
@@ -100,8 +101,6 @@ public class ThriftProtocol extends AbstractProtocol {
         public void received(Channel channel, Object message) throws RemotingException {
             if (message instanceof Invocation) {
                 reply((ExchangeChannel) channel, message);
-            } else {
-                super.received(channel, message);
             }
         }
 

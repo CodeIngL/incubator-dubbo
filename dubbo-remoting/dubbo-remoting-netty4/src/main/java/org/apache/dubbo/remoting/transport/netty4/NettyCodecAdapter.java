@@ -32,6 +32,7 @@ import java.util.List;
 
 /**
  * NettyCodecAdapter.
+ * 编解码器适配器，封装了所有的编解码
  */
 final public class NettyCodecAdapter {
 
@@ -69,7 +70,7 @@ final public class NettyCodecAdapter {
 
         @Override
         protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
-            org.apache.dubbo.remoting.buffer.ChannelBuffer buffer = new NettyBackedChannelBuffer(out);
+            ChannelBuffer buffer = new NettyBackedChannelBuffer(out);
             Channel ch = ctx.channel();
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
             try {

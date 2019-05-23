@@ -44,6 +44,12 @@ public abstract class AbstractProtocol implements Protocol {
     //TODO SOFEREFENCE
     protected final Set<Invoker<?>> invokers = new ConcurrentHashSet<Invoker<?>>();
 
+    /**
+     * 标识一个接口服务的key
+     * port，path，version，group
+     * @param url
+     * @return
+     */
     protected static String serviceKey(URL url) {
         int port = url.getParameter(Constants.BIND_PORT_KEY, url.getPort());
         return serviceKey(port, url.getPath(), url.getParameter(Constants.VERSION_KEY),

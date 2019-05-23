@@ -110,11 +110,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
     /**
      * 是否是injvm引用
      * <ul>
-     *     <li></li>
-     *     <li></li>
      *     <li>返回调用是远程调用</li>
-     *     <li></li>
-     *     <li></li>
      * </ul>
      * @param url
      * @return

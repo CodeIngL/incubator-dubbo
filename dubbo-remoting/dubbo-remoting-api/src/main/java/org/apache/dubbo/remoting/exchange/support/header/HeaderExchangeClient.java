@@ -38,10 +38,13 @@ import static org.apache.dubbo.common.utils.UrlUtils.getIdleTimeout;
 
 /**
  * DefaultMessageClient
+ * 基于头部的信息交互，通过持有传输的网络客户端来进行传输
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
+    //下层网络传输
     private final Client client;
+    //包装client的channel
     private final ExchangeChannel channel;
 
     private static final HashedWheelTimer IDLE_CHECK_TIMER = new HashedWheelTimer(

@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RpcUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(RpcUtils.class);
-    private static final AtomicLong INVOKE_ID = new AtomicLong(0);
+    private static final AtomicLong INVOKE_ID = new AtomicLong(0); //调用Id,用于区分
 
     public static Class<?> getReturnType(Invocation invocation) {
         try {
@@ -66,21 +66,27 @@ public class RpcUtils {
     }
 
     // TODO why not get return type when initialize Invocation?
+    // TODO 为什么在初始化调用时没有得到返回类型？
     public static Type[] getReturnTypes(Invocation invocation) {
         try {
             if (invocation != null && invocation.getInvoker() != null
                     && invocation.getInvoker().getUrl() != null
                     && !invocation.getMethodName().startsWith("$")) {
-                String service = invocation.getInvoker().getUrl().getServiceInterface();
+                String service = invocation.getInvoker().getUrl().getServiceInterface(); //服务名
                 if (StringUtils.isNotEmpty(service)) {
-                    Class<?> invokerInterface = invocation.getInvoker().getInterface();
+                    Class<?> invokerInterface = invocation.getInvoker().getInterface(); //接口类型
                     Class<?> cls = invokerInterface != null ? ReflectUtils.forName(invokerInterface.getClassLoader(), service)
                             : ReflectUtils.forName(service);
-                    Method method = cls.getMethod(invocation.getMethodName(), invocation.getParameterTypes());
+                    Method method = cls.getMethod(invocation.getMethodName(), invocation.getParameterTypes()); //方法
                     if (method.getReturnType() == void.class) {
                         return null;
                     }
-                    Class<?> returnType = method.getReturnType();
+                    Class<?> returnType = method.getReturnType(); //返回类型
+                    /**
+                     * 返回一个Type对象，该对象表示此Method对象表示的方法的正式返回类型。
+                     * 如果返回类型是参数化类型，则返回的Type对象必须准确反映源代码中使用的实际类型参数。
+                     * 如果返回类型是类型变量或参数化类型，则会创建它。 否则，它就解决了
+                     */
                     Type genericReturnType = method.getGenericReturnType();
                     if (Future.class.isAssignableFrom(returnType)) {
                         if (genericReturnType instanceof ParameterizedType) {
@@ -124,6 +130,13 @@ public class RpcUtils {
         }
     }
 
+    /**
+     * 是否invocation需要带上调用id
+     * invocationid.autoattach
+     * @param url
+     * @param invocation
+     * @return
+     */
     private static boolean isAttachInvocationId(URL url, Invocation invocation) {
         String value = url.getMethodParameter(invocation.getMethodName(), Constants.AUTO_ATTACH_INVOCATIONID_KEY);
         if (value == null) {
@@ -182,6 +195,12 @@ public class RpcUtils {
         return invocation.getParameterTypes();
     }
 
+    /**
+     * 本次调用是否说明是异步的async异步
+     * @param url
+     * @param inv
+     * @return
+     */
     public static boolean isAsync(URL url, Invocation inv) {
         boolean isAsync;
         if (Boolean.TRUE.toString().equals(inv.getAttachment(Constants.ASYNC_KEY))) {

@@ -72,10 +72,9 @@ public class DefaultFuture implements ResponseFuture {
     private DefaultFuture(Channel channel, Request request, int timeout) {
         this.channel = channel;
         this.request = request;
-        // 获取请求 id
+        // 获取请求id
         this.id = request.getId();
         this.timeout = timeout > 0 ? timeout : channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
-        // put into waiting map.
         // 存储 <requestId, DefaultFuture> 映射关系到 FUTURES 中，进行等待
         FUTURES.put(id, this);
         CHANNELS.put(id, channel);
@@ -102,6 +101,7 @@ public class DefaultFuture implements ResponseFuture {
     public static DefaultFuture newFuture(Channel channel, Request request, int timeout) {
         final DefaultFuture future = new DefaultFuture(channel, request, timeout);
         // timeout check
+        //超时检查
         timeoutCheck(future);
         return future;
     }
@@ -260,6 +260,10 @@ public class DefaultFuture implements ResponseFuture {
         }
     }
 
+    /**
+     * 回调设置响应的Callback
+     * @param c
+     */
     private void invokeCallback(ResponseCallback c) {
         ResponseCallback callbackCopy = c;
         if (callbackCopy == null) {

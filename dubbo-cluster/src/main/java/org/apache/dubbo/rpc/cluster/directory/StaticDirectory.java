@@ -93,16 +93,17 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
     }
 
     /**
-     * 显示invocation对应的Invoker列表
-     * 使用routerChain进行筛选
+     * 静态形式的目录服务，本次RpcInvocation筛选符合的Invoker列表
+     *
      * @param invocation
      * @return
      * @throws RpcException
      */
     @Override
     protected List<Invoker<T>> doList(Invocation invocation) throws RpcException {
+        //静态的invoker列表
         List<Invoker<T>> finalInvokers = invokers;
-        if (routerChain != null) {
+        if (routerChain != null) { //存在路由链，使用路由列对静态的invoker列表进行路由
             try {
                 finalInvokers = routerChain.route(getConsumerUrl(), invocation);
             } catch (Throwable t) {

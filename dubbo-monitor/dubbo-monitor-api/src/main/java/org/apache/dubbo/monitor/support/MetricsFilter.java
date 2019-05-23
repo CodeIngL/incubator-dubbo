@@ -33,6 +33,9 @@ import org.apache.dubbo.rpc.support.RpcUtils;
 
 import java.util.HashMap;
 
+/**
+ * 度量衡
+ */
 public class MetricsFilter implements Filter {
 
     private static final Logger logger = LoggerFactory.getLogger(MetricsFilter.class);
@@ -41,9 +44,11 @@ public class MetricsFilter implements Filter {
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         RpcContext context = RpcContext.getContext();
         boolean isProvider = context.isProviderSide();
+        //开始时间
         long start = System.currentTimeMillis();
         try {
             Result result = invoker.invoke(invocation); // proceed invocation chain
+            ///持续时间
             long duration = System.currentTimeMillis() - start;
             reportMetrics(invoker, invocation, duration, "success", isProvider);
             return result;
@@ -67,10 +72,20 @@ public class MetricsFilter implements Filter {
         }
     }
 
+    /**
+     * 报告度量衡
+     * @param invoker
+     * @param invocation
+     * @param duration
+     * @param result
+     * @param isProvider 是否是提供者
+     */
     private void reportMetrics(Invoker<?> invoker, Invocation invocation, long duration, String result, boolean isProvider) {
         String serviceName = invoker.getInterface().getName();
         String methodName = RpcUtils.getMethodName(invocation);
+        //全局的
         MetricName global;
+        //方法
         MetricName method;
         if (isProvider) {
             global = new MetricName(Constants.DUBBO_PROVIDER, MetricLevel.MAJOR);

@@ -47,11 +47,11 @@ public final class DubboCountCodec implements Codec2 {
      */
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
-        int save = buffer.readerIndex();
-        MultiMessage result = MultiMessage.create();
+        int save = buffer.readerIndex(); //当前读位置
+        MultiMessage result = MultiMessage.create(); //构建多个结果
         do {
             //单个
-            Object obj = codec.decode(channel, buffer);
+            Object obj = codec.decode(channel, buffer); //使用单个去解析
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);
                 break;

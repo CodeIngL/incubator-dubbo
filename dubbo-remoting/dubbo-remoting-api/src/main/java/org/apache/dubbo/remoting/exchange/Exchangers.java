@@ -28,7 +28,7 @@ import org.apache.dubbo.remoting.transport.ChannelHandlerAdapter;
 
 /**
  * Exchanger facade. (API, Static, ThreadSafe)
- * 工具类
+ * 工具类,使用Exchangers构建出相应的Exchanger，通过指定url来确定使用的特定Exchanger，目前仅仅是HeaderExchange
  */
 public class Exchangers {
 
@@ -106,6 +106,13 @@ public class Exchangers {
         return connect(URL.valueOf(url), handler);
     }
 
+    /**
+     *
+     * @param url
+     * @param handler
+     * @return
+     * @throws RemotingException
+     */
     public static ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException {
         if (url == null) {
             throw new IllegalArgumentException("url is null");

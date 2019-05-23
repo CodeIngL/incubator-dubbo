@@ -78,6 +78,13 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
         return getProxy(invoker, interfaces);
     }
 
+    /**
+     * 为指定的type接口构建代理，实现中将要回调invoker的invoker方法
+     * @param invoker
+     * @param types
+     * @param <T>
+     * @return
+     */
     public abstract <T> T getProxy(Invoker<T> invoker, Class<?>[] types);
 
 }

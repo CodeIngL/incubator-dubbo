@@ -64,7 +64,7 @@ public class ProtocolUtils {
                 && Constants.GENERIC_SERIALIZATION_NATIVE_JAVA.equalsIgnoreCase(generic);
     }
 
-    public static boolean isBeanGenericSerialization(String generic) {
+    public static boolean isBeanGenericSerialization(String generic) {//bean
         return isGeneric(generic) && Constants.GENERIC_SERIALIZATION_BEAN.equals(generic);
     }
 }

@@ -32,6 +32,9 @@ import java.util.Map;
 /**
  * ContextFilter set the provider RpcContext with invoker, invocation, local port it is using and host for
  * current execution thread.
+ * <p>
+ *     ContextFilter使用调用者，调用，它正在使用的本地端口和当前执行线程的主机来设置提供者RpcContext。
+ * </p>
  *
  * @see RpcContext
  */

@@ -24,6 +24,8 @@ import org.apache.dubbo.remoting.transport.ChannelHandlerDispatcher;
 
 /**
  * Transporter facade. (API, Static, ThreadSafe)
+ * <p>
+ * 工具类,使用Transporter构建出相应的传输层（client or server），通过指定url来确定使用的特定（client or server）
  */
 public class Transporters {
 
@@ -60,6 +62,13 @@ public class Transporters {
         return connect(URL.valueOf(url), handler);
     }
 
+    /**
+     * handler处理Channel
+     * @param url
+     * @param handlers
+     * @return
+     * @throws RemotingException
+     */
     public static Client connect(URL url, ChannelHandler... handlers) throws RemotingException {
         if (url == null) {
             throw new IllegalArgumentException("url == null");

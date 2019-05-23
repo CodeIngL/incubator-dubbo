@@ -31,7 +31,7 @@ import java.util.function.Function;
  * You should never rely on this class directly when using or extending Dubbo, the implementation of {@link AsyncRpcResult}
  * is only a workaround for compatibility purpose. It may be changed or even get removed from the next major version.
  * Please only use {@link Result} or {@link RpcResult}.
- *
+ * <p>
  * Extending the {@link Filter} is one typical use case:
  * <pre>
  * {@code
@@ -93,6 +93,11 @@ public class AsyncRpcResult extends AbstractResult {
              * 1. future complete before whenComplete. whenComplete fn (resultFuture.complete) will be executed in thread subscribing, in our case, it's Dubbo thread.
              * 2. future complete after whenComplete. whenComplete fn (resultFuture.complete) will be executed in thread calling complete, normally its User thread.
              */
+            /**
+             * 我们不知道future是否已经完成，这是future暴露甚至最终用户创造的。
+             * 1.future完成在whenComplete之前完成。 whenComplete fn（resultFuture.complete）将在线程订阅中执行，在我们的例子中，它是Dubbo线程。
+             * 2.future完成在whenComplete之后完成。 whenComplete fn（resultFuture.complete）将在线程调用完成时执行，通常是其用户User线程。
+             */
             future.whenComplete((v, t) -> {
                 RpcResult rpcResult;
                 if (t != null) {
@@ -105,6 +110,7 @@ public class AsyncRpcResult extends AbstractResult {
                     rpcResult = new RpcResult(v);
                 }
                 // instead of resultFuture we must use rFuture here, resultFuture may being changed before complete when building filter chain, but rFuture was guaranteed never changed by closure.
+                // 而不是resultFuture我们必须在这里使用rFuture，结果在构建过滤器链之前，Future可能会在完成之前被更改，但rFuture保证永远不会被闭包改变。
                 rFuture.complete(rpcResult);
             });
         }

@@ -129,7 +129,6 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     }
 
     /**
-     *
      * @param url
      * @return
      */
@@ -197,6 +196,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * 全量通知，注册在注册中心上的url信息
+     *
      * @param urls The list of registered information , is always not empty.
      *             The meaning is the same as the return value of {@link org.apache.dubbo.registry.RegistryService#lookup(URL)}.
      */
@@ -280,7 +280,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             if (invokerUrls.isEmpty()) {
                 return;
             }
-            //转换Wie新的的invoker
+            //转换为新的的invoker
             Map<String, Invoker<T>> newUrlInvokerMap = toInvokers(invokerUrls);// Translate url list to Invoker map
 
             /**
@@ -314,6 +314,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * 需要merge一下
+     *
      * @param invokers
      * @return
      */
@@ -346,6 +347,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * 构建路由的配置信息
+     *
      * @param urls
      * @return null : no routers ,do nothing
      * else :routers list
@@ -477,10 +479,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         providerUrl = providerUrl.addParameter(Constants.CHECK_KEY, String.valueOf(false)); // Do not check whether the connection is successful or not, always create Invoker!
 
         // The combination of directoryUrl and override is at the end of notify, which can't be handled here
+        // directoryUrl和override的组合位于notify的末尾，此处无法处理
         this.overrideDirectoryUrl = this.overrideDirectoryUrl.addParametersIfAbsent(providerUrl.getParameters()); // Merge the provider side parameters
 
-        if ((providerUrl.getPath() == null || providerUrl.getPath()
-                .length() == 0) && Constants.DUBBO_PROTOCOL.equals(providerUrl.getProtocol())) { // Compatible version 1.0
+        if ((providerUrl.getPath() == null || providerUrl.getPath().length() == 0)
+                && Constants.DUBBO_PROTOCOL.equals(providerUrl.getProtocol())) { // Compatible version 1.0
             //fix by tony.chenl DUBBO-44
             String path = directoryUrl.getParameter(Constants.INTERFACE_KEY);
             if (path != null) {
@@ -585,16 +588,24 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         }
     }
 
+    /**
+     * 注册中心形式的目录服务，为本次RpcInvocation筛选符合的Invoker列表
+     *
+     * @param invocation
+     * @return
+     */
     @Override
     public List<Invoker<T>> doList(Invocation invocation) {
-        if (forbidden) {
+        if (forbidden) { //被禁用了
             // 1. No service provider 2. Service providers are disabled
+            // 1.没有服务提供者 2.服务提供者被禁用
             throw new RpcException(RpcException.FORBIDDEN_EXCEPTION, "No provider available from registry " +
                     getUrl().getAddress() + " for service " + getConsumerUrl().getServiceKey() + " on consumer " +
                     NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion() +
                     ", please check status of providers(disabled, not registered or in blacklist).");
         }
 
+        //附属多组
         if (multiGroup) {
             return this.invokers == null ? Collections.emptyList() : this.invokers;
         }
@@ -602,27 +613,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         List<Invoker<T>> invokers = null;
         try {
             // Get invokers from cache, only runtime routers will be executed.
+            // 从缓存中获取调用者，只执行运行时路由器。
             invokers = routerChain.route(getConsumerUrl(), invocation);
         } catch (Throwable t) {
             logger.error("Failed to execute router: " + getUrl() + ", cause: " + t.getMessage(), t);
         }
-
-
-        // FIXME Is there any need of failing back to Constants.ANY_VALUE or the first available method invokers when invokers is null?
-        /*Map<String, List<Invoker<T>>> localMethodInvokerMap = this.methodInvokerMap; // local reference
-        if (localMethodInvokerMap != null && localMethodInvokerMap.size() > 0) {
-            String methodName = RpcUtils.getMethodName(invocation);
-            invokers = localMethodInvokerMap.get(methodName);
-            if (invokers == null) {
-                invokers = localMethodInvokerMap.get(Constants.ANY_VALUE);
-            }
-            if (invokers == null) {
-                Iterator<List<Invoker<T>>> iterator = localMethodInvokerMap.values().iterator();
-                if (iterator.hasNext()) {
-                    invokers = iterator.next();
-                }
-            }
-        }*/
         return invokers == null ? Collections.emptyList() : invokers;
     }
 
@@ -660,6 +655,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         return false;
     }
 
+    /**
+     * 通过url来构建相应的路由链
+     *
+     * @param url
+     */
     public void buildRouterChain(URL url) {
         this.setRouterChain(RouterChain.buildChain(url));
     }
@@ -707,6 +707,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * 使用configurators 进行处理
+     *
      * @param configurators
      */
     private void doOverrideUrl(List<Configurator> configurators) {

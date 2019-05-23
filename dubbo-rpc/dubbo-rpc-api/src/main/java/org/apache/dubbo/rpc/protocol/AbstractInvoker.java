@@ -79,6 +79,13 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         this.attachment = attachment == null ? null : Collections.unmodifiableMap(attachment);
     }
 
+    /**
+     * 将URL中关于keys相关信息构件成一个map返回
+     * 即提取相关的k-v值
+     * @param url
+     * @param keys
+     * @return
+     */
     private static Map<String, String> convertAttachment(URL url, String[] keys) {
         if (ArrayUtils.isEmpty(keys)) {
             return null;
@@ -147,11 +154,11 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         invocation.setInvoker(this);
 
 
-        if (CollectionUtils.isNotEmptyMap(attachment)) {
+        if (CollectionUtils.isNotEmptyMap(attachment)) { //提取特定协议下构建的相关k-v信息
             // 将Invoker中的attachment添加到调用的rpc#attachment中
             invocation.addAttachmentsIfAbsent(attachment);
         }
-        Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
+        Map<String, String> contextAttachments = RpcContext.getContext().getAttachments(); //添加本次context上的attachments
         if (CollectionUtils.isNotEmptyMap(contextAttachments)) {
             /**
              * invocation.addAttachmentsIfAbsent(context){@link RpcInvocation#addAttachmentsIfAbsent(Map)}should not be used here,

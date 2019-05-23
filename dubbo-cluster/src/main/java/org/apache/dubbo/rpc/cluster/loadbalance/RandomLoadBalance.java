@@ -36,10 +36,13 @@ public class RandomLoadBalance extends AbstractLoadBalance {
         // Number of invokers
         int length = invokers.size();
         // Every invoker has the same weight?
+        // 是否权重都一样
         boolean sameWeight = true;
         // the weight of every invokers
+        // 存储invokers权重信息
         int[] weights = new int[length];
         // the first invoker's weight
+        // 第一个权重
         int firstWeight = getWeight(invokers.get(0), invocation);
         weights[0] = firstWeight;
         // The sum of weights

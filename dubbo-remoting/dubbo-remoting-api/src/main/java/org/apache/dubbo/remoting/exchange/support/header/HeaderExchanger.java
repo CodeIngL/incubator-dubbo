@@ -43,6 +43,7 @@ public class HeaderExchanger implements Exchanger {
      */
     @Override
     public ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException {
+        //ExchangeHandler包装为支持头部的HeaderExchangeHandler在包装为支持解码的DecodeHandler
         return new HeaderExchangeClient(Transporters.connect(url, new DecodeHandler(new HeaderExchangeHandler(handler))), true);
     }
 
