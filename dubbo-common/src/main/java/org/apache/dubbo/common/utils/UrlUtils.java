@@ -353,7 +353,7 @@ public class UrlUtils {
     public static boolean isMatchCategory(String category, String categories) {
         if (categories == null || categories.length() == 0) {
             return DEFAULT_CATEGORY.equals(category);
-        } else if (categories.contains(Constants.ANY_VALUE)) {
+        } else if (categories.contains(ANY_VALUE)) {
             return true;
         } else if (categories.contains(Constants.REMOVE_VALUE_PREFIX)) {
             return !categories.contains(Constants.REMOVE_VALUE_PREFIX + category);
@@ -362,35 +362,38 @@ public class UrlUtils {
         }
     }
 
+    /**
+     * 想要比较的对象和被比较的对象
+     * @param consumerUrl
+     * @param providerUrl
+     * @return
+     */
     public static boolean isMatch(URL consumerUrl, URL providerUrl) {
         String consumerInterface = consumerUrl.getServiceInterface();
         String providerInterface = providerUrl.getServiceInterface();
         //FIXME accept providerUrl with '*' as interface name, after carefully thought about all possible scenarios I think it's ok to add this condition.
-        if (!(Constants.ANY_VALUE.equals(consumerInterface)
-                || Constants.ANY_VALUE.equals(providerInterface)
-                || StringUtils.isEquals(consumerInterface, providerInterface))) {
+        if (!(ANY_VALUE.equals(consumerInterface) || ANY_VALUE.equals(providerInterface) || StringUtils.isEquals(consumerInterface, providerInterface))) {
             return false;
         }
 
-        if (!isMatchCategory(providerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY),
-                consumerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY))) {
+        if (!isMatchCategory(providerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY), consumerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY))) {
             return false;
         }
         if (!providerUrl.getParameter(Constants.ENABLED_KEY, true)
-                && !Constants.ANY_VALUE.equals(consumerUrl.getParameter(Constants.ENABLED_KEY))) {
+                && !ANY_VALUE.equals(consumerUrl.getParameter(Constants.ENABLED_KEY))) {
             return false;
         }
 
         String consumerGroup = consumerUrl.getParameter(GROUP_KEY);
         String consumerVersion = consumerUrl.getParameter(VERSION_KEY);
-        String consumerClassifier = consumerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
+        String consumerClassifier = consumerUrl.getParameter(Constants.CLASSIFIER_KEY, ANY_VALUE);
 
         String providerGroup = providerUrl.getParameter(GROUP_KEY);
         String providerVersion = providerUrl.getParameter(VERSION_KEY);
-        String providerClassifier = providerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
-        return (Constants.ANY_VALUE.equals(consumerGroup) || StringUtils.isEquals(consumerGroup, providerGroup) || StringUtils.isContains(consumerGroup, providerGroup))
-                && (Constants.ANY_VALUE.equals(consumerVersion) || StringUtils.isEquals(consumerVersion, providerVersion))
-                && (consumerClassifier == null || Constants.ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));
+        String providerClassifier = providerUrl.getParameter(Constants.CLASSIFIER_KEY, ANY_VALUE);
+        return (ANY_VALUE.equals(consumerGroup) || StringUtils.isEquals(consumerGroup, providerGroup) || StringUtils.isContains(consumerGroup, providerGroup))
+                && (ANY_VALUE.equals(consumerVersion) || StringUtils.isEquals(consumerVersion, providerVersion))
+                && (consumerClassifier == null || ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));
     }
 
     public static boolean isMatchGlobPattern(String pattern, String value, URL param) {

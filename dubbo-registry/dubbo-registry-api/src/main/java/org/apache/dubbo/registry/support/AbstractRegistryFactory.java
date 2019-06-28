@@ -109,7 +109,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
                 .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY)
                 .build();
         //获得注册中心和该注册中心url对应的key值:protocol://username:password@ip:port/group/com.alibaba.dubbo.registry:version
-        //构建注册中心相关身份key，不需要url的相关参数，能区分不同的注册中心就可以了
+        //构建注册中心相关身份key，不需要url的相关参数，能区分不同的注册中心就可以了，因为要存储在本地
         String key = url.toServiceStringWithoutResolving();
         // Lock the registry access process to ensure a single instance of the registry
         //锁定注册中心获取过程，保证注册中心单一实例

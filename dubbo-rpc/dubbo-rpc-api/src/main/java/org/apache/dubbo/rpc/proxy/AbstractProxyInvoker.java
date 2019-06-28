@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
  * InvokerWrapper
  */
 public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
+
     Logger logger = LoggerFactory.getLogger(AbstractProxyInvoker.class);
 
     private final T proxy;

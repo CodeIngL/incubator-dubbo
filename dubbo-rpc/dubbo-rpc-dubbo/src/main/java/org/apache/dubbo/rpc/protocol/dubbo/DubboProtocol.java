@@ -143,7 +143,7 @@ public class DubboProtocol extends AbstractProtocol {
             Result result = invoker.invoke(inv);
 
             if (result instanceof AsyncRpcResult) {
-                return ((AsyncRpcResult) result).getResultFuture().thenApply(r -> (Object) r);
+                return ((AsyncRpcResult) result).getResultFuture().thenApply(r -> r);
             } else {
                 return CompletableFuture.completedFuture(result);
             }

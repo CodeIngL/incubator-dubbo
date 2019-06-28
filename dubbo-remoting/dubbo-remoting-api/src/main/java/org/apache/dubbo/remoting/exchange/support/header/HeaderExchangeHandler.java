@@ -110,7 +110,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         try {
             // 继续向下调用
             CompletableFuture<Object> future = handler.reply(channel, msg);
-            if (future.isDone()) {
+            if (future.isDone()) { //result存在就是，就是同步
                 // 设置 OK 状态码
                 res.setStatus(Response.OK);
                 // 设置调用结果

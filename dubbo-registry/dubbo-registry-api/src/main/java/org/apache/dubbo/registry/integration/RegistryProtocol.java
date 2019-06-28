@@ -416,9 +416,8 @@ public class RegistryProtocol implements Protocol {
         }
         //构建路由链
         directory.buildRouterChain(subscribeUrl);
-        //订阅
-        directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY,
-                PROVIDERS_CATEGORY + "," + CONFIGURATORS_CATEGORY + "," + ROUTERS_CATEGORY));
+        //订阅了，providers目录，configurators目录，routers目录
+        directory.subscribe(subscribeUrl.addParameter(CATEGORY_KEY, PROVIDERS_CATEGORY + "," + CONFIGURATORS_CATEGORY + "," + ROUTERS_CATEGORY));
 
         //注册Protocol本来就有cluster的性质
         Invoker invoker = cluster.join(directory);
@@ -541,8 +540,7 @@ public class RegistryProtocol implements Protocol {
         public synchronized void notify(List<URL> urls) {
             logger.debug("original override urls: " + urls);
 
-            List<URL> matchedUrls = getMatchedUrls(urls, subscribeUrl.addParameter(CATEGORY_KEY,
-                    CONFIGURATORS_CATEGORY));
+            List<URL> matchedUrls = getMatchedUrls(urls, subscribeUrl.addParameter(CATEGORY_KEY, CONFIGURATORS_CATEGORY));
             logger.debug("subscribe url: " + subscribeUrl + ", override urls: " + matchedUrls);
 
             // No matching results

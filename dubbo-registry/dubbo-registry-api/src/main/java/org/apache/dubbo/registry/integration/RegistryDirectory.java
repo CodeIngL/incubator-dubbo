@@ -401,27 +401,20 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         //查询的协议
         String queryProtocols = this.queryMap.get(Constants.PROTOCOL_KEY);
         for (URL providerUrl : urls) {
+            String providerProtocol = providerUrl.getProtocol();
             // If protocol is configured at the reference side, only the matching protocol is selected
             // 仅仅只有匹配上的协议的重新refer是我们支持的
             if (queryProtocols != null && queryProtocols.length() > 0) {
-                boolean accept = false;
-                String[] acceptProtocols = queryProtocols.split(",");
-                for (String acceptProtocol : acceptProtocols) {
-                    if (providerUrl.getProtocol().equals(acceptProtocol)) {
-                        accept = true;
-                        break;
-                    }
-                }
-                if (!accept) {
+                if(!queryProtocols.contains(providerProtocol)){
                     continue;
                 }
             }
             //空的跳过
-            if (Constants.EMPTY_PROTOCOL.equals(providerUrl.getProtocol())) {
+            if (Constants.EMPTY_PROTOCOL.equals(providerProtocol)) {
                 continue;
             }
-            if (!ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(providerUrl.getProtocol())) {
-                logger.error(new IllegalStateException("Unsupported protocol " + providerUrl.getProtocol() +
+            if (!ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(providerProtocol)) {
+                logger.error(new IllegalStateException("Unsupported protocol " + providerProtocol +
                         " in notified url: " + providerUrl + " from registry " + getUrl().getAddress() +
                         " to consumer " + NetUtils.getLocalHost() + ", supported protocol: " +
                         ExtensionLoader.getExtensionLoader(Protocol.class).getSupportedExtensions()));

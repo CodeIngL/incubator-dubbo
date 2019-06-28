@@ -38,6 +38,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.dubbo.common.Constants.*;
+
 /**
  * ZookeeperRegistry
  *
@@ -131,7 +133,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     @Override
     public void doSubscribe(final URL url, final NotifyListener listener) {
         try {
-            if (Constants.ANY_VALUE.equals(url.getServiceInterface())) {
+            if (Constants.ANY_VALUE.equals(url.getServiceInterface())) { //*服务
                 String root = toRootPath();
                 ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
                 if (listeners == null) {
@@ -154,7 +156,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                 }
                 zkClient.create(root, false);
                 List<String> services = zkClient.addChildListener(root, zkListener);
-                if (CollectionUtils.isNotEmpty(services)) {
+                if (CollectionUtils.isNotEmpty(services)) { //订阅下一步全部子服务
                     for (String service : services) {
                         service = URL.decode(service);
                         anyServices.add(service);
@@ -164,7 +166,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                 }
             } else {
                 List<URL> urls = new ArrayList<>();
-                for (String path : toCategoriesPath(url)) {
+                for (String path : toCategoriesPath(url)) { //目录
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
                     if (listeners == null) {
                         zkListeners.putIfAbsent(url, new ConcurrentHashMap<>());
@@ -238,18 +240,17 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
     private String toServicePath(URL url) {
         String name = url.getServiceInterface();
-        if (Constants.ANY_VALUE.equals(name)) {
+        if (Constants.ANY_VALUE.equals(name)) { //*就是全部服务
             return toRootPath();
         }
-        return toRootDir() + URL.encode(name);
+        return toRootDir() + URL.encode(name); //否则就是具体的服务名
     }
 
     private String[] toCategoriesPath(URL url) {
         String[] categories;
-        if (Constants.ANY_VALUE.equals(url.getParameter(Constants.CATEGORY_KEY))) {
-            categories = new String[]{Constants.PROVIDERS_CATEGORY, Constants.CONSUMERS_CATEGORY,
-                    Constants.ROUTERS_CATEGORY, Constants.CONFIGURATORS_CATEGORY};
-        } else {
+        if (Constants.ANY_VALUE.equals(url.getParameter(Constants.CATEGORY_KEY))) { //*就是全组，
+            categories = new String[]{PROVIDERS_CATEGORY, CONSUMERS_CATEGORY, ROUTERS_CATEGORY, CONFIGURATORS_CATEGORY};
+        } else { //否则请选择感兴趣的事情
             categories = url.getParameter(Constants.CATEGORY_KEY, new String[]{Constants.DEFAULT_CATEGORY});
         }
         String[] paths = new String[categories.length];
