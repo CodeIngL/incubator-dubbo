@@ -330,6 +330,7 @@ public class ExtensionLoader<T> {
         List<T> exts = new ArrayList<>();
         List<String> names = values == null ? new ArrayList<>(0) : Arrays.asList(values);
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
+            //没有删除默认的，-default，默认删除所有默认的
             getExtensionClasses(); //先尝试加载所有的扩展
             for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) { //遍历缓存的扩展
                 String name = entry.getKey(); //名字
@@ -361,8 +362,7 @@ public class ExtensionLoader<T> {
         List<T> usrs = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
             String name = names.get(i);
-            if (!name.startsWith(Constants.REMOVE_VALUE_PREFIX)
-                    && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
+            if (!name.startsWith(Constants.REMOVE_VALUE_PREFIX) && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
                 if (Constants.DEFAULT_KEY.equals(name)) {
                     if (!usrs.isEmpty()) {
                         exts.addAll(0, usrs);

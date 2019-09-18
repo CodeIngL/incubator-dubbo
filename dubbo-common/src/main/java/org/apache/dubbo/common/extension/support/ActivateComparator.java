@@ -117,6 +117,9 @@ public class ActivateComparator implements Comparator<Object> {
         return info;
     }
 
+    /**
+     * 关于Activate的信息
+     */
     private static class ActivateInfo {
         private String[] before;
         private String[] after;
